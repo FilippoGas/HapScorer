@@ -1,8 +1,14 @@
-sample_sheet: ".test/config/samples.tsv"
+# config/config.yaml
 
-get_genome:
-  ncbi_ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_genomic.fna.gz
+# ==============================================================================
+# PIPELINE ANALYSIS CONFIGURATION
+# ==============================================================================
 
-simulate_reads:
-  read_length: 100
-  read_number: 10000
+# --- Input Files & Metadata ---
+samples: "config/samples.tsv"
+
+# --- Variant Filtering & Processing (BCFtools) ---
+bcftools:
+  vqsr_threshold: 99.9
+  # pass_only: true
+  # min_qual: 30

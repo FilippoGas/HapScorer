@@ -1,38 +1,29 @@
+# workflow/schemas/config.schema.yaml
+
 $schema: "https://json-schema.org/draft/2020-12/schema"
+description: "Validation schema for config.yaml"
+
 type: object
-description: main configuration schema for the workflow
+
 properties:
-  sample_sheet:
+  samples:
     type: string
-    description: path to sample sheet, mandatory
-    default: config/samples.tsv
+    description: "Path to the TSV file containing the sample table."
 
-  get_genome:
+  bcftools:
     type: object
+    description: "Filtering and analysis parameters with BCFtools."
     properties:
-      ncbi_ftp:
-        type: string
-        description: URL for genome retrieval from NCBI FTP server
-        default: ""
+      vqsr_threshold:
+        type: number
+        minimum: 0.0
+        maximum: 100.0
+        default: 99.9
+        description: "VQSR threshold as a percentage."
     required:
-      - ncbi_ftp
+      - vqsr_threshold
 
-  simulate_reads:
-    type: object
-    properties:
-      read_length:
-        type: integer
-        description: length of target reads in bp
-        default: 100
-      read_number:
-        type: integer
-        description: number of total reads to be simulated
-        default: 10000
-    required:
-      - read_length
-      - read_number
-
+# Top-level fields mandatory in config.yaml
 required:
-  - sample_sheet
-  - get_genome
-  - simulate_reads
+  - samples
+  - bcftools
