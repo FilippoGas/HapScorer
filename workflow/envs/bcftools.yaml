@@ -1,0 +1,7 @@
+# workflow/envs/bfctools.yaml
+
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - bcftools=1.24
