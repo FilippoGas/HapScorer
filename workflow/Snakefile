@@ -26,6 +26,7 @@ SAMPLES = pd.read_csv(config["samples"], sep="\t", dtype={"sample": str})[
 # load rules
 # -----------------------------------------------------
 include: "rules/variant_processing.smk"
+include: "rules/phasing.smk"
 
 
 # optional messages, log and error handling
@@ -48,3 +49,6 @@ rule all:
     default_target: True
     input:
         "results/merged/all_samples.vcf.gz",
+        "results/merged/all_samples.vcf.gz.csi",
+        expand("results/phasing/split/all_samples_chr{i}.vcf.gz.csi", i=range(1, 23)),
+        expand("results/phasing/split/all_samples_chr{i}.vcf.gz.csi", i=range(1, 23)),

@@ -14,3 +14,8 @@ temp_dir: "results/temp"
 variant_processing:
   filter_variants:
     vqsr_threshold: 99.9
+
+# --- Phasing Rules Configuration ---
+phasing:
+  shapeit5_phasing:
+    gmap_template: "resources/gmaps/{chr}.b38.gmap.gz"
