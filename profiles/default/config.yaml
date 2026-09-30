@@ -15,13 +15,13 @@ default-resources:
 set-threads:
   filter_variants: 2
   concat_sample_variants: 2
-  merge_all_samples: 4
+  merge_and_sort_samples: 4
 
 # Resource override by rule
 set-resources:
   filter_variants:
     mem_mb: 4000
     runtime: 60
-  merge_all_samples:
+  merge_and_sort_samples:
     mem_mb: 8000
     runtime: 120

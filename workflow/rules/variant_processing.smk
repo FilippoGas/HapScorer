@@ -1,4 +1,4 @@
-# workflow/rules/bfctools.smk
+# workflow/rules/variant_processing.smk
 
 
 wildcard_constraints:
@@ -74,30 +74,37 @@ rule concat_sample_variants:
         """
 
 
-rule merge_all_samples:
+rule merge_and_sort_samples:
     """
-    Merge concatenated VCF files across all cohort samples into a multi-sample VCF.
+    Merge concatenated VCF files across all cohort samples into a multi-sample VCF,
+    sort coordinates, and build the index required for chromosome splitting.
 
-    Executes ``bcftools merge`` on all sample-level files defined in the workflow context.
+    Executes ``bcftools merge`` piped into ``bcftools sort``, followed by indexing.
 
     :input vcfs: List of per-sample concatenated VCF files.
     :input csis: List of index files for each per-sample VCF.
     :output vcf: Final unified multi-sample VCF file (``all_samples.vcf.gz``).
+    :output csi: Index file for the merged multi-sample VCF.
     """
     input:
         vcfs=expand("results/concat/{sample}.vcf.gz", sample=SAMPLES),
         csis=expand("results/concat/{sample}.vcf.gz.csi", sample=SAMPLES),
     output:
         vcf=protected("results/merged/all_samples.vcf.gz"),
+        csi=protected("results/merged/all_samples.vcf.gz.csi"),
     log:
-        "logs/merge_all_samples/all_samples.log",
+        "logs/merge_and_sort_samples/all_samples.log",
     benchmark:
-        "benchmarks/merge_all_samples/all_samples.tsv"
+        "benchmarks/merge_and_sort_samples/all_samples.tsv"
     conda:
         "../envs/variant_processing.yaml"
+    resources:
+        tmpdir=config.get("temp_dir", "results/temp"),
     message:
-        "Merging per-sample VCFs into cohort VCF across all samples"
+        "Merging, sorting, and indexing cohort VCF across all samples"
     shell:
         """
-        bcftools merge {input.vcfs} -Oz -o {output.vcf} >{log} 2>&1
+        bcftools merge --threads {threads} {input.vcfs} -Ou \
+            | bcftools sort -T {resources.tmpdir} -Oz -o {output.vcf} >{log} 2>&1
+        bcftools index --threads {threads} {output.vcf} >>{log} 2>&1
         """
