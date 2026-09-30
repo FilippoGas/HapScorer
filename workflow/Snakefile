@@ -40,6 +40,7 @@ SAMPLES = samples_df.set_index(["sample", "var_type"], drop=False)
 # load helper functions, data structures, and rule definitions
 # -----------------------------------------------------
 include: "rules/variant_processing.smk"
+include: "rules/phasing.smk"
 
 
 # optional messages, log and error handling
@@ -63,3 +64,5 @@ rule all:
     input:
         "results/merged/all_samples.vcf.gz",
         "results/merged/all_samples.vcf.gz.csi",
+        expand("results/phasing/split/all_samples_chr{i}.vcf.gz.csi", i=range(1, 23)),
+        expand("results/phasing/split/all_samples_chr{i}.vcf.gz.csi", i=range(1, 23)),

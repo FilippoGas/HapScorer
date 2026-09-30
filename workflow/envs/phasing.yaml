@@ -1,9 +1,10 @@
-# workflow/envs/variant_processing.yaml
+# workflow/envs/phasing.yaml
 
-name: variant_processing
+name: phasing
 channels:
   - conda-forge
   - bioconda
   - nodefaults
 dependencies:
+  - shapeit5=5.1.1
   - bcftools=1.24
