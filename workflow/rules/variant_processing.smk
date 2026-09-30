@@ -26,13 +26,9 @@ rule filter_variants:
     benchmark:
         "benchmarks/filter_variants/{sample}_{var_type}.tsv"
     conda:
-        "../envs/bcftools.yaml"
-    threads: 2
-    resources:
-        mem_mb=4000,
-        runtime=60,
+        "../envs/variant_processing.yaml"
     params:
-        threshold=config["bcftools"]["vqsr_threshold"],
+        threshold=config["variant_processing"]["filter_variants"]["vqsr_threshold"],
     message:
         "Filtering {wildcards.var_type} variants for {wildcards.sample} (VQSR > {params.threshold})"
     shell:
@@ -68,11 +64,7 @@ rule concat_sample_variants:
     benchmark:
         "benchmarks/concat_sample_variants/{sample}.tsv"
     conda:
-        "../envs/bcftools.yaml"
-    threads: 2
-    resources:
-        mem_mb=4000,
-        runtime=60,
+        "../envs/variant_processing.yaml"
     message:
         "Concatenating SNP and INDEL variants for sample {wildcards.sample}"
     shell:
@@ -102,11 +94,7 @@ rule merge_all_samples:
     benchmark:
         "benchmarks/merge_all_samples/all_samples.tsv"
     conda:
-        "../envs/bcftools.yaml"
-    threads: 4
-    resources:
-        mem_mb=8000,
-        runtime=120,
+        "../envs/variant_processing.yaml"
     message:
         "Merging per-sample VCFs into cohort VCF across all samples"
     shell:

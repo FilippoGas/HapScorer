@@ -10,20 +10,26 @@ properties:
     type: string
     description: "Path to the TSV file containing the sample table."
 
-  bcftools:
+  variant_processing:
     type: object
     description: "Filtering and analysis parameters with BCFtools."
     properties:
-      vqsr_threshold:
-        type: number
-        minimum: 0.0
-        maximum: 100.0
-        default: 99.9
-        description: "VQSR threshold as a percentage."
+      filter_variants:
+        type: object
+        description: "Parameters for the filter_variants rule."
+        properties:
+          vqsr_threshold:
+            type: number
+            minimum: 0.0
+            maximum: 100.0
+            default: 99.9
+            description: "VQSR threshold as a percentage."
+        required:
+          - vqsr_threshold
     required:
-      - vqsr_threshold
+      - filter_variants
 
 # Top-level fields mandatory in config.yaml
 required:
   - samples
-  - bcftools
+  - variant_processing

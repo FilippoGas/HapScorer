@@ -7,8 +7,7 @@
 # --- Input Files & Metadata ---
 samples: "config/samples.tsv"
 
-# --- Variant Filtering & Processing (BCFtools) ---
-bcftools:
-  vqsr_threshold: 99.9
-  # pass_only: true
-  # min_qual: 30
+# --- Variant Processing Rules Configuration ---
+variant_processing:
+  filter_variants:
+    vqsr_threshold: 99.9
