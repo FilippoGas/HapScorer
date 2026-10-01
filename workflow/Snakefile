@@ -31,28 +31,15 @@ include: "rules/variant_processing.smk"
 # optional messages, log and error handling
 # -----------------------------------------------------
 onstart:
-    print("\n=== Haplotype-Resolved PLM Scoring Workflow ===")
-    print(f"Total samples to process: {len(SAMPLES)}")
-    print(f"Samples: {', '.join(SAMPLES)}")
-    print(
-        f"VQSR Threshold: {config["variant_processing"]["filter_variants"]["vqsr_threshold"]}"
-    )
-    print("===============================================\n")
+    print("\n--- Analysis started ---\n")
 
 
 onsuccess:
-    print("\n=== Workflow completed successfully! ===")
-    print("All sample VCFs filtered, concatenated, and merged.")
-    print(
-        "Output available at: results/merged/all_samples.vcf.gz\n"
-    )  # TODO: to update with new versions
+    print("\n--- Workflow finished! ---\n")
 
 
 onerror:
-    print("\n=== Workflow failed! ===")
-    print(
-        "Check individual job log files in the 'logs/' directory for error details.\n"
-    )
+    print("\n--- An error occurred! ---\n")
 
 
 # target rules

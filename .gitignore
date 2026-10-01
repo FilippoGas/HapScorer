@@ -1,6 +1,7 @@
 results/**
 resources/**
 logs/**
+benchmarks/**
 .snakemake
 .snakemake/**
 .test/benchmarks/*
