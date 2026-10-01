@@ -1,8 +1,11 @@
 results/**
 resources/**
 logs/**
+benchmarks/**
 .snakemake
 .snakemake/**
+.test/benchmarks/*
+.test/logs/*
 .test/results/*
 workflow/notebooks/.ipynb_checkpoints/**
 **/.Rhistory

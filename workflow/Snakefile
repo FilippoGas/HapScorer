@@ -3,16 +3,29 @@
 # https://snakemake.readthedocs.io/en/stable/snakefiles/best_practices.html,
 # in particular regarding the standardized folder structure mentioned there.
 
+# import basic packages
+# -----------------------------------------------------
+import pandas as pd
+from snakemake.utils import validate
 
-# load configuration
+
+# load configuration and validate schema
 # -----------------------------------------------------
 configfile: "config/config.yaml"
 
 
+validate(config, schema="schemas/config.schema.yaml")
+
+
+# read sample sheet
+SAMPLES = pd.read_csv(config["samples"], sep="\t", dtype={"sample": str})[
+    "sample"
+].tolist()
+
+
 # load rules
 # -----------------------------------------------------
-include: "rules/common.smk"
-include: "rules/process_reads.smk"
+include: "rules/variant_processing.smk"
 
 
 # optional messages, log and error handling
@@ -34,4 +47,4 @@ onerror:
 rule all:
     default_target: True
     input:
-        "results/multiqc/multiqc_report.html",
+        "results/merged/all_samples.vcf.gz",

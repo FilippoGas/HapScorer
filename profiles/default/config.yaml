@@ -1,0 +1,27 @@
+# profiles/default/config.yaml
+
+# ==============================================================================
+# EXECUTION PROFILE (HARDWARE & RESOURCES)
+# ==============================================================================
+
+cores: 4
+
+# Default values ​​for all rules that do not have specifications.
+default-resources:
+  mem_mb: 2000
+  runtime: 30 # Minutes
+
+# Threads override by rule
+set-threads:
+  filter_variants: 2
+  concat_sample_variants: 2
+  merge_and_sort_samples: 4
+
+# Resource override by rule
+set-resources:
+  filter_variants:
+    mem_mb: 4000
+    runtime: 60
+  merge_and_sort_samples:
+    mem_mb: 8000
+    runtime: 120
