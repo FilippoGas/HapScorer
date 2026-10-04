@@ -13,4 +13,11 @@ temp_dir: "results/temp"
 # --- Variant Processing Rules Configuration ---
 variant_processing:
   filter_variants:
-    vqsr_threshold: 99.9
+    include_pass: true
+    tranches:
+      snp:
+        - "99.90to99.95"
+        - "99.95to100.00"
+      indel:
+        - "99.90to99.95"
+        - "99.95to100.00"

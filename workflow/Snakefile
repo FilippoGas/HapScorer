@@ -1,3 +1,5 @@
+# workflow/Snakefile
+
 # Main entrypoint of the workflow.
 # Please follow the best practices:
 # https://snakemake.readthedocs.io/en/stable/snakefiles/best_practices.html,
@@ -5,7 +7,6 @@
 
 # import basic packages
 # -----------------------------------------------------
-import pandas as pd
 from snakemake.utils import validate
 
 
@@ -17,14 +18,15 @@ configfile: "config/config.yaml"
 validate(config, schema="schemas/config.schema.yaml")
 
 
-# read sample sheet
-SAMPLES = pd.read_csv(config["samples"], sep="\t", dtype={"sample": str})[
-    "sample"
-].tolist()
-
-
-# load rules
+# global wildcard constrains
 # -----------------------------------------------------
+wildcard_constraints:
+    var_type="SNP|snp|INDEL|indel",
+
+
+# load helper functions, data structures, and rule definitions
+# -----------------------------------------------------
+include: "rules/common.smk"
 include: "rules/variant_processing.smk"
 
 

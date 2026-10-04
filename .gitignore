@@ -2,6 +2,7 @@ results/**
 resources/**
 logs/**
 benchmarks/**
+data/**
 .snakemake
 .snakemake/**
 .test/benchmarks/*

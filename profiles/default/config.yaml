@@ -4,6 +4,7 @@
 # EXECUTION PROFILE (HARDWARE & RESOURCES)
 # ==============================================================================
 
+latency-wait: 10
 cores: 4
 
 # Default values ​​for all rules that do not have specifications.

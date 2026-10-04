@@ -1,23 +1,19 @@
 # workflow/rules/variant_processing.smk
 
 
-wildcard_constraints:
-    var_type="SNP|INDEL",
-
-
 rule filter_variants:
     """
-    Filter SNPs or INDELs for a given sample based on a VQSR quality threshold.
+    Filter SNPs or INDELs for a given sample based on config-defined VQSR tranches.
 
-    Applies ``bcftools filter`` to isolate high-quality variants.
+    Applies ``bcftools filter`` to isolate high-confidence variants using logical
+    expressions generated dynamically from workflow configuration settings.
 
-    :input vcf: Raw compressed VCF file (``data/{sample}_{var_type}.vcf.gz``).
-    :output vcf: Filtered VCF file.
+    :input vcf: Input VCF file retrieved via ``get_raw_vcf`` from sample metadata.
+    :output vcf: Filtered compressed VCF file.
     :output csi: Index file for the filtered VCF.
-    :param threshold: Minimum VQSR quality score required to pass filtering.
     """
     input:
-        vcf="data/{sample}_{var_type}.vcf.gz",
+        vcf=get_raw_vcf,
     output:
         vcf=temp("results/filtered/{sample}_{var_type}_filtered.vcf.gz"),
         csi=temp("results/filtered/{sample}_{var_type}_filtered.vcf.gz.csi"),
@@ -28,12 +24,12 @@ rule filter_variants:
     conda:
         "../envs/variant_processing.yaml"
     params:
-        threshold=config["variant_processing"]["filter_variants"]["vqsr_threshold"],
+        filter_expr=get_filter_expression,
     message:
-        "Filtering {wildcards.var_type} variants for {wildcards.sample} (VQSR > {params.threshold})"
+        "Filtering {wildcards.var_type} variants for {wildcards.sample} with filter '{params.filter_expr}'"
     shell:
         """
-        bcftools filter --threads {threads} -i 'VQSR > {params.threshold}' {input.vcf} -Oz -o {output.vcf} >{log} 2>&1
+        bcftools filter --threads {threads} -i '{params.filter_expr}' {input.vcf} -Oz -o {output.vcf} >{log} 2>&1
         bcftools index --threads {threads} {output.vcf} >>{log} 2>&1
         """
 
@@ -42,14 +38,15 @@ rule concat_sample_variants:
     """
     Concatenate filtered SNP and INDEL VCF files into a single per-sample VCF.
 
-    Uses ``bcftools concat`` with the ``-a`` flag to allow overlap resolution.
+    Uses ``bcftools concat`` with the ``-a`` flag to resolve overlapping positions
+    and produce a unified per-sample variant call set.
 
     :input snps: Filtered SNP VCF file.
     :input indels: Filtered INDEL VCF file.
     :input snps_csi: CSI index for filtered SNPs.
     :input indels_csi: CSI index for filtered INDELs.
-    :output vcf: Combined per-sample VCF file.
-    :output csi: Index file for the combined VCF.
+    :output vcf: Combined per-sample compressed VCF file.
+    :output csi: Index file for the combined per-sample VCF.
     """
     input:
         snps="results/filtered/{sample}_SNP_filtered.vcf.gz",
@@ -87,8 +84,10 @@ rule merge_and_sort_samples:
     :output csi: Index file for the merged multi-sample VCF.
     """
     input:
-        vcfs=expand("results/concat/{sample}.vcf.gz", sample=SAMPLES),
-        csis=expand("results/concat/{sample}.vcf.gz.csi", sample=SAMPLES),
+        vcfs=expand("results/concat/{sample}.vcf.gz", sample=SAMPLES["sample"].unique()),
+        csis=expand(
+            "results/concat/{sample}.vcf.gz.csi", sample=SAMPLES["sample"].unique()
+        ),
     output:
         vcf=protected("results/merged/all_samples.vcf.gz"),
         csi=protected("results/merged/all_samples.vcf.gz.csi"),
@@ -104,7 +103,7 @@ rule merge_and_sort_samples:
         "Merging, sorting, and indexing cohort VCF across all samples"
     shell:
         """
-        bcftools merge --threads {threads} {input.vcfs} -Ou \
+        bcftools merge --threads {threads} --force-single {input.vcfs} -Ou \
             | bcftools sort -T {resources.tmpdir} -Oz -o {output.vcf} >{log} 2>&1
         bcftools index --threads {threads} {output.vcf} >>{log} 2>&1
         """

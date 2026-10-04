@@ -10,26 +10,49 @@ properties:
     type: string
     description: "Path to the TSV file containing the sample table."
 
+  temp_dir:
+    type: string
+    description: "Path to the directory used for temporary files."
+
   variant_processing:
     type: object
-    description: "Filtering and analysis parameters with BCFtools."
+    description: "Filtering and processing parameters for genomic variants."
     properties:
       filter_variants:
         type: object
-        description: "Parameters for the filter_variants rule."
+        description: "Configuration parameters for variant filtering rules."
         properties:
-          vqsr_threshold:
-            type: number
-            minimum: 0.0
-            maximum: 100.0
-            default: 99.9
-            description: "VQSR threshold as a percentage."
+          include_pass:
+            type: boolean
+            default: true
+            description: "Boolean flag indicating whether to keep variants with 'PASS' filter."
+
+          tranches:
+            type: object
+            description: "VQSR sensitivity tranche lists for variant types."
+            properties:
+              snp:
+                type: array
+                description: "List of VQSR tranche interval strings for SNPs."
+                items:
+                  type: string
+              indel:
+                type: array
+                description: "List of VQSR tranche interval strings for INDELs."
+                items:
+                  type: string
+            required:
+              - snp
+              - indel
+
         required:
-          - vqsr_threshold
+          - include_pass
+          - tranches
+
     required:
       - filter_variants
 
-# Top-level fields mandatory in config.yaml
+# Top-level mandatory fields in config.yaml
 required:
   - samples
   - variant_processing
