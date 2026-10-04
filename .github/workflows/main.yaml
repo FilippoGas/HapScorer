@@ -51,13 +51,10 @@ jobs:
 
       - name: Validate merge_and_sort_samples rule output
         run: |
-          # Ensure bcftools is available via environment or conda
-          eval "$(conda shell.bash hook)"
-
-          # Compare variant calls and header definitions while ignoring non-deterministic execution metadata
+          # Decompress and compare VCF content using native zgrep to avoid host dependency issues
           diff -u \
-            <(bcftools view .test/results/merged/all_samples.vcf.gz | grep -v '^##bcftools' | grep -v '^##fileDate') \
-            <(bcftools view .test/expected/merged/all_samples.vcf.gz | grep -v '^##bcftools' | grep -v '^##fileDate')
+            <(zgrep -v '^##bcftools' .test/results/merged/all_samples.vcf.gz | zgrep -v '^##fileDate') \
+            <(zgrep -v '^##bcftools' .test/expected/merged/all_samples.vcf.gz | zgrep -v '^##fileDate')
 
       - name: Test report
         uses: snakemake/snakemake-github-action@v2
