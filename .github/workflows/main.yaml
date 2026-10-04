@@ -49,6 +49,16 @@ jobs:
           snakefile: workflow/Snakefile
           args: "--profile ../profiles/test --conda-cleanup-pkgs cache --all-temp"
 
+      - name: Validate merge_and_sort_samples rule output
+        run: |
+          # Ensure bcftools is available via environment or conda
+          eval "$(conda shell.bash hook)"
+
+          # Compare variant calls and header definitions while ignoring non-deterministic execution metadata
+          diff -u \
+            <(bcftools view .test/results/merged/all_samples.vcf.gz | grep -v '^##bcftools' | grep -v '^##fileDate') \
+            <(bcftools view .test/expected/merged/all_samples.vcf.gz | grep -v '^##bcftools' | grep -v '^##fileDate')
+
       - name: Test report
         uses: snakemake/snakemake-github-action@v2
         with:

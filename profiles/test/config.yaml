@@ -5,7 +5,7 @@
 # ==============================================================================
 
 cores: 2
-latency-wait: 10
+latency-wait: 15
 use-conda: true
 show-failed-logs: true
 

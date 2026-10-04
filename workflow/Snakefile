@@ -21,7 +21,7 @@ validate(config, schema="schemas/config.schema.yaml")
 # global wildcard constrains
 # -----------------------------------------------------
 wildcard_constraints:
-    var_type="SNP|snp|INDEL|indel",
+    var_type="snp|indel",
 
 
 # load helper functions, data structures, and rule definitions

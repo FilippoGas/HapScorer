@@ -49,10 +49,10 @@ rule concat_sample_variants:
     :output csi: Index file for the combined per-sample VCF.
     """
     input:
-        snps="results/filtered/{sample}_SNP_filtered.vcf.gz",
-        indels="results/filtered/{sample}_INDEL_filtered.vcf.gz",
-        snps_csi="results/filtered/{sample}_SNP_filtered.vcf.gz.csi",
-        indels_csi="results/filtered/{sample}_INDEL_filtered.vcf.gz.csi",
+        snps="results/filtered/{sample}_snp_filtered.vcf.gz",
+        indels="results/filtered/{sample}_indel_filtered.vcf.gz",
+        snps_csi="results/filtered/{sample}_snp_filtered.vcf.gz.csi",
+        indels_csi="results/filtered/{sample}_indel_filtered.vcf.gz.csi",
     output:
         vcf="results/concat/{sample}.vcf.gz",
         csi="results/concat/{sample}.vcf.gz.csi",
