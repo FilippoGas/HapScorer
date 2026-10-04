@@ -3,7 +3,7 @@
 name: Tests
 on:
   push:
-    branches: [main]
+    # branches: [main]
   pull_request:
     branches: [main]
 
@@ -47,7 +47,7 @@ jobs:
         with:
           directory: .test
           snakefile: workflow/Snakefile
-          args: "--profile ../profiles/test --conda-cleanup-pkgs cache --all-temp"
+          args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp"
 
       - name: Validate merge_and_sort_samples rule output
         run: |
@@ -64,4 +64,4 @@ jobs:
         with:
           directory: .test
           snakefile: workflow/Snakefile
-          args: "--profile ../profiles/test --report report.zip"
+          args: "--profile profiles/test --report report.zip"
