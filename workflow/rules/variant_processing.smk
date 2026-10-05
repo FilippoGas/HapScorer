@@ -23,6 +23,9 @@ rule filter_variants:
         "benchmarks/filter_variants/{sample}_{var_type}.tsv"
     conda:
         "../envs/variant_processing.yaml"
+    threads: 2
+    resources:
+        mem_mb=2000,
     params:
         filter_expr=get_filter_expression,
     message:
@@ -62,6 +65,9 @@ rule concat_sample_variants:
         "benchmarks/concat_sample_variants/{sample}.tsv"
     conda:
         "../envs/variant_processing.yaml"
+    threads: 2
+    resources:
+        mem_mb=2000,
     message:
         "Concatenating SNP and INDEL variants for sample {wildcards.sample}"
     shell:
@@ -97,13 +103,14 @@ rule merge_and_sort_samples:
         "benchmarks/merge_and_sort_samples/all_samples.tsv"
     conda:
         "../envs/variant_processing.yaml"
+    threads: 4
     resources:
-        tmpdir=config.get("temp_dir", "results/temp"),
+        mem_mb=4000,
     message:
         "Merging, sorting, and indexing cohort VCF across all samples"
     shell:
         """
         bcftools merge --threads {threads} --force-single {input.vcfs} -Ou \
-            | bcftools sort -T {resources.tmpdir} -Oz -o {output.vcf} >{log} 2>&1
+            | bcftools sort -T {resources.tmpdir}/ -Oz -o {output.vcf} >{log} 2>&1
         bcftools index --threads {threads} {output.vcf} >>{log} 2>&1
         """

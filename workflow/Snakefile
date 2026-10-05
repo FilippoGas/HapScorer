@@ -50,3 +50,4 @@ rule all:
     default_target: True
     input:
         "results/merged/all_samples.vcf.gz",
+        "results/merged/all_samples.vcf.gz.csi",
