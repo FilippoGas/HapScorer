@@ -7,17 +7,5 @@
 # --- Input Files & Metadata ---
 samples: "config/samples.tsv"
 
-# --- System & Resources ---
-temp_dir: "results/temp"
-
 # --- Variant Processing Rules Configuration ---
-variant_processing:
-  filter_variants:
-    include_pass: true
-    tranches:
-      snp:
-        - "99.90to99.95"
-        - "99.95to100.00"
-      indel:
-        - "99.90to99.95"
-        - "99.95to100.00"
+# variant_processing:
