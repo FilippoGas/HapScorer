@@ -28,6 +28,9 @@ rule split_vcf_by_chr:
         "benchmarks/split_vcf_by_chr/{chr}.tsv"
     conda:
         "../envs/phasing.yaml"
+    threads: 2
+    resources:
+        mem_mb=2000,
     message:
         "Extracting and indexing chromosome {wildcards.chr} from merged cohort VCF"
     shell:

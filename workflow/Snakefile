@@ -64,5 +64,5 @@ rule all:
     input:
         "results/merged/all_samples.vcf.gz",
         "results/merged/all_samples.vcf.gz.csi",
-        expand("results/phasing/split/all_samples_chr{i}.vcf.gz.csi", i=range(1, 23)),
+        expand("results/phasing/split/all_samples_chr{i}.vcf.gz", i=range(1, 23)),
         expand("results/phasing/split/all_samples_chr{i}.vcf.gz.csi", i=range(1, 23)),

@@ -21,6 +21,9 @@ set-threads:
   concat_sample_variants: 2
   merge_and_sort_samples: 2
 
+  # workflow/rules/phasing.smk
+  split_vcf_by_chr: 2
+
 # Memory and execution bounds per rule
 set-resources:
   # workflow/rules/variant_processing.smk
@@ -32,4 +35,9 @@ set-resources:
     runtime: 30
   merge_and_sort_samples:
     mem_mb: 4000
+    runtime: 30
+
+  # workflow/rules/phasing.smk
+  split_vcf_by_chr:
+    mem_mb: 2000
     runtime: 30
