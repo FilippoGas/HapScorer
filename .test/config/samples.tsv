@@ -1,3 +1,5 @@
 sample	var_type	vcf_path
 UVM	snp	data/UVM.snp.subset.filtered.vcf.gz
 UVM	indel	data/UVM.indel.subset.filtered.vcf.gz
+MESO	snp	data/MESO.snp.subset.filtered.vcf.gz
+MESO	indel	data/MESO.indel.subset.filtered.vcf.gz
