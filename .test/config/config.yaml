@@ -1,8 +1,11 @@
-sample_sheet: "config/samples.tsv"
+# .test/config/config.yaml
 
-get_genome:
-  ncbi_ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_genomic.fna.gz
+# ==============================================================================
+# PIPELINE ANALYSIS CONFIGURATION
+# ==============================================================================
 
-simulate_reads:
-  read_length: 100
-  read_number: 10000
+# --- Input Files & Metadata ---
+samples: "config/samples.tsv"
+
+# --- Variant Processing Rules Configuration ---
+# variant_processing:

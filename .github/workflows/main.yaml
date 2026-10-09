@@ -1,5 +1,6 @@
-name: Tests
+# .github/workflows/main.yaml
 
+name: Tests
 on:
   push:
     branches: [main]
@@ -46,11 +47,18 @@ jobs:
         with:
           directory: .test
           snakefile: workflow/Snakefile
-          args: "--sdm conda --show-failed-logs --cores 2 --conda-cleanup-pkgs cache --all-temp"
+          args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp"
+
+      - name: Validate merge_and_sort_samples rule output
+        run: |
+          # Decompress and compare VCF content using native zgrep to avoid host dependency issues
+          diff -u \
+            <(zgrep -v '^##bcftools' .test/results/merged/all_samples.vcf.gz | zgrep -v '^##fileDate') \
+            <(zgrep -v '^##bcftools' .test/expected/merged/all_samples.vcf.gz | zgrep -v '^##fileDate')
 
       - name: Test report
         uses: snakemake/snakemake-github-action@v2
         with:
           directory: .test
           snakefile: workflow/Snakefile
-          args: "--report report.zip"
+          args: "--profile profiles/test --report report.zip"

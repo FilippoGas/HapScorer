@@ -1,25 +1,35 @@
+# workflow/schemas/samples.schema.yaml
+
 $schema: "https://json-schema.org/draft/2020-12/schema"
-description: entries for the sample sheet
+description: "JSON schema for validating the sample metadata TSV file in Snakemake."
+
+type: "object"
+
 properties:
   sample:
-    type: string
-    description: sample name/identifier
-  condition:
-    type: string
-    description: sample condition that will be compared during differential analysis
-  replicate:
-    type: integer
-    default: 1
-    description: consecutive numbers representing multiple replicates of one condition
-  read1:
-    type: string
-    description: names of fastq.gz files, read 1
-  read2:
-    type: string
-    description: names of fastq.gz files, read 2 (optional)
+    type: "string"
+    description: "Unique identifier for the biological sample."
+    minLength: 1
+    pattern: "^[a-zA-Z0-9_-]+$"
 
+  var_type:
+    type: "string"
+    description: "Type of genomic variant (e.g., SNP or INDEL)."
+    enum:
+      - "snp"
+      - "indel"
+      - "SNPs"
+      - "INDELs"
+      - "SNP"
+      - "INDEL"
+
+  vcf_path:
+    type: "string"
+    description: "Relative or absolute file system path to the input raw VCF file."
+    minLength: 1
+
+# Top-level fields mandatory in samples.tsv
 required:
-  - sample
-  - condition
-  - replicate
-  - read1
+  - "sample"
+  - "var_type"
+  - "vcf_path"

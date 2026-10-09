@@ -1,0 +1,35 @@
+# profiles/test/config.yaml
+
+# ==============================================================================
+# TEST EXECUTION PROFILE (CI/CD ENVIRONMENT)
+# ==============================================================================
+
+cores: 2
+latency-wait: 15
+use-conda: true
+show-failed-logs: true
+
+# Baseline resource allocations for test environment
+default-resources:
+  mem_mb: 2000
+  runtime: 15
+
+# Thread limits constrained to runner capacity
+set-threads:
+  # workflow/rules/variant_processing.smk
+  filter_variants: 2
+  concat_sample_variants: 2
+  merge_and_sort_samples: 2
+
+# Memory and execution bounds per rule
+set-resources:
+  # workflow/rules/variant_processing.smk
+  filter_variants:
+    mem_mb: 2000
+    runtime: 30
+  concat_sample_variants:
+    mem_mb: 2000
+    runtime: 30
+  merge_and_sort_samples:
+    mem_mb: 4000
+    runtime: 30
