@@ -1,7 +1,15 @@
 # workflow/rules/phasing.smk
 
+# Injects fallback defaults if not defined in config.yaml
+resources_cfg = config.setdefault("resources", {})
+resources_cfg.setdefault("genetic_maps_tar", "resources/genetic_maps.b38.tar.gz")
+resources_cfg.setdefault("genetic_maps_dir", "resources/maps")
+
 # Autosomal chromosomes (1–22)
 CHROMOSOMES = [f"chr{i}" for i in range(1, 23)]
+
+MAPS_TAR = Path(config["resources"]["genetic_maps_tar"])
+MAPS_DIR = Path(config["resources"]["genetic_maps_dir"])
 
 
 rule split_vcf_by_chr:
@@ -37,4 +45,39 @@ rule split_vcf_by_chr:
         """
         bcftools view --threads {threads} -r {wildcards.chr} {input.vcf} -Oz -o {output.vcf} >{log} 2>&1
         bcftools index --threads {threads} {output.vcf} >>{log} 2>&1
+        """
+
+
+rule unpack_genetic_map:
+    """
+    Extract the per-chromosome genetic map file from the bundled tarball resource.
+
+    Executes ``tar`` to decompress and extract a specific chromosome's genetic map
+    file directly into the configured resources directory.
+
+    :input tar: Bundled tarball containing genetic map files for all chromosomes.
+    :output gmap: Extracted per-chromosome genetic map file (``{chr}.b38.gmap.gz``).
+    """
+    input:
+        tar=MAPS_TAR,
+    output:
+        gmap=MAPS_DIR / "{chr}.b38.gmap.gz",
+    log:
+        "logs/unpack_genetic_map/{chr}.log",
+    benchmark:
+        "benchmarks/unpack_genetic_map/{chr}.tsv"
+    conda:
+        "../envs/phasing.yaml"
+    threads: 1
+    resources:
+        mem_mb=1000,
+        runtime=15,
+    params:
+        maps_dir=MAPS_DIR,
+    message:
+        "Extracting genetic map for chromosome {wildcards.chr}"
+    shell:
+        """
+        mkdir -p {params.maps_dir}
+        tar -xzf {input.tar} -C {params.maps_dir} {wildcards.chr}.b38.gmap.gz >{log} 2>&1
         """

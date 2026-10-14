@@ -10,6 +10,18 @@ properties:
     type: string
     description: "Path to the TSV file containing the sample table."
 
+  resources:
+    type: object
+    description: "Paths for external static reference resources and genetic maps."
+    defaults: {}
+    properties:
+      genetic_maps_tar:
+        type: string
+        description: "Path to the bundled tarball containing per-chromosome genetic maps."
+      genetic_maps_dir:
+        type: string
+        description: "Directory where extracted genetic maps are stored."
+
   # variant_processing:
   #   type: object
   #   description: "Processing parameters for genomic variants."
