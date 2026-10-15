@@ -71,13 +71,13 @@ jobs:
             echo "Validating phased BCF output for ${chr}..."
 
             # Checking for file existence
-            test -f ".test/results/phasing/phased/phased_${chr}.bcf"
-            test -f ".test/results/phasing/phased/phased_${chr}.bcf.csi"
+            test -f ".test/results/phasing/phased/phased_${chr}.vcf.gz"
+            test -f ".test/results/phasing/phased/phased_${chr}.vcf.gz.csi"
 
             # Comparison with the one in the expected directory
             diff -u \
-              <(bcftools view -H .test/results/phasing/phased/phased_${chr}.bcf) \
-              <(bcftools view -H .test/expected/phasing/phased/phased_${chr}.bcf)
+              <(bcftools view -H .test/results/phasing/phased/phased_${chr}.vcf.gz) \
+              <(bcftools view -H .test/expected/phasing/phased/phased_${chr}.vcf.gz)
           done
 
       - name: Test report
