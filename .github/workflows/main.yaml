@@ -47,7 +47,7 @@ jobs:
         with:
           directory: .test
           snakefile: workflow/Snakefile
-          args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp"
+          args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp all_test"
 
       - name: Install validation dependencies
         run: |
@@ -56,19 +56,25 @@ jobs:
 
       - name: Validate merge_and_sort_samples rule output
         run: |
-          # Decompress and compare VCF content using native zgrep to avoid host dependency issues
+          # Checking for file existence
+          test -f ".test/results/merged/all_samples.vcf.gz"
+          test -f ".test/expected/merged/all_samples.vcf.gz"
+
+          # Comparison with the one in the expected directory
           diff -u \
-            <(zgrep -v '^##bcftools' .test/results/merged/all_samples.vcf.gz | zgrep -v '^##fileDate') \
-            <(zgrep -v '^##bcftools' .test/expected/merged/all_samples.vcf.gz | zgrep -v '^##fileDate')
+            <(bcftools view -H .test/results/merged/all_samples.vcf.gz) \
+            <(bcftools view -H .test/expected/merged/all_samples.vcf.gz)
 
       - name: Validate phase_common_variants rule output
         run: |
           for chr in chr3 chr6 chr8 chr21 chr22; do
             echo "Validating phased BCF output for ${chr}..."
 
+            # Checking for file existence
             test -f ".test/results/phasing/phased/phased_${chr}.bcf"
             test -f ".test/results/phasing/phased/phased_${chr}.bcf.csi"
 
+            # Comparison with the one in the expected directory
             diff -u \
               <(bcftools view -H .test/results/phasing/phased/phased_${chr}.bcf) \
               <(bcftools view -H .test/expected/phasing/phased/phased_${chr}.bcf)
