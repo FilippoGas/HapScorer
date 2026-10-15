@@ -93,7 +93,7 @@ rule phase_common_variants:
     Perform common variant haplotype phasing on a per-chromosome basis using SHAPEIT5.
 
     Executes ``SHAPEIT5_phase_common`` on an individual chromosome VCF using
-    a chromosome-specific genetic map, followed by indexing of the output VCF.
+    a chromosome-specific genetic map to output a phased BCF file and its CSI index.
 
     :input vcf: Unphased per-chromosome VCF file.
     :input csi: CSI index for the unphased per-chromosome VCF.
@@ -109,8 +109,8 @@ rule phase_common_variants:
         csi="results/phasing/split/all_samples_{chr}.vcf.gz.csi",
         gmap=MAPS_DIR / "{chr}.b38.gmap.gz",
     output:
-        bcf=protected("results/phasing/phased/phased_{chr}.bcf"),
-        csi=protected("results/phasing/phased/phased_{chr}.bcf.csi"),
+        bcf=temp("results/phasing/phased/phased_{chr}.bcf"),
+        csi=temp("results/phasing/phased/phased_{chr}.bcf.csi"),
     log:
         "logs/phasing/phase_common_variants/{chr}.log",
     benchmark:
@@ -135,4 +135,38 @@ rule phase_common_variants:
             --filter-maf {params.filter_maf} \
             --output {output.bcf} \
             --thread {threads} >{log} 2>&1
+        """
+
+
+rule convert_phased_bcf_to_vcf:
+    """
+    Convert phased BCF file to compressed VCF (vcf.gz) and generate CSI index using bcftools.
+
+    :input bcf: Phased BCF file for the target chromosome.
+    :input csi: CSI index of the input BCF file.
+    :output vcf: Compressed phased VCF file (bgzf).
+    :output csi: CSI index for the compressed phased VCF file.
+    """
+    input:
+        bcf="results/phasing/phased/phased_{chr}.bcf",
+        csi="results/phasing/phased/phased_{chr}.bcf.csi",
+    output:
+        vcf=protected("results/phasing/phased/phased_{chr}.vcf.gz"),
+        csi=protected("results/phasing/phased/phased_{chr}.vcf.gz.csi"),
+    log:
+        "logs/phasing/convert_phased_bcf_to_vcf/{chr}.log",
+    benchmark:
+        "benchmarks/phasing/convert_phased_bcf_to_vcf/{chr}.tsv"
+    conda:
+        "../envs/phasing.yaml"
+    threads: 2
+    resources:
+        mem_mb=2000,
+        runtime=30,
+    message:
+        "Converting phased BCF to VCF.gz for chromosome {wildcards.chr}"
+    shell:
+        """
+        bcftools view --threads {threads} {input.bcf} -Oz -o {output.vcf} >{log} 2>&1
+        bcftools index --threads {threads} {output.vcf} >>{log} 2>&1
         """
