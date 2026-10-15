@@ -13,7 +13,6 @@ properties:
   resources:
     type: object
     description: "Paths for external static reference resources and genetic maps."
-    defaults: {}
     properties:
       genetic_maps_tar:
         type: string
@@ -26,7 +25,23 @@ properties:
   #   type: object
   #   description: "Processing parameters for genomic variants."
 
+  phasing:
+    type: object
+    description: "Configuration for phasing pipeline steps."
+    properties:
+      phase_common_variants:
+        type: object
+        description: "Parameters for the phase_common rule."
+        properties:
+          filter_maf:
+            type: number
+            minimum: 0.0
+            maximum: 0.5
+            description: "MAF threshold for filtering target variants in SHAPEIT5."
+            default: 0.001
+
 # Top-level mandatory fields in config.yaml
 required:
   - samples
   # - variant_processing
+  # - phasing

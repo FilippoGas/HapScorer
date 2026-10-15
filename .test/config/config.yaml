@@ -15,5 +15,5 @@ samples: "config/samples.tsv"
 
 # --- Phasing Rules Configuration ---
 phasing:
-  shapeit5_phasing:
-    gmap_template: "resources/gmaps/{chr}.b38.gmap.gz"
+  phase_common_variants:
+    filter_maf: 0.01

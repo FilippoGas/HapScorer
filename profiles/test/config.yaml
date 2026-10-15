@@ -17,19 +17,17 @@ default-resources:
 # Thread limits constrained to runner capacity
 set-threads:
   # workflow/rules/variant_processing.smk
-  filter_variants: 2
   concat_sample_variants: 2
   merge_and_sort_samples: 2
 
   # workflow/rules/phasing.smk
   split_vcf_by_chr: 2
+  unpack_genetic_map: 1
+  phase_common_variants: 1
 
 # Memory and execution bounds per rule
 set-resources:
   # workflow/rules/variant_processing.smk
-  filter_variants:
-    mem_mb: 2000
-    runtime: 30
   concat_sample_variants:
     mem_mb: 2000
     runtime: 30
@@ -41,3 +39,9 @@ set-resources:
   split_vcf_by_chr:
     mem_mb: 2000
     runtime: 30
+  unpack_genetic_map:
+    mem_mb: 2000
+    runtime: 30
+  phase_common_variants:
+    mem_mb: 4000
+    runtime: 60

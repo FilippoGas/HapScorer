@@ -5,8 +5,13 @@ resources_cfg = config.setdefault("resources", {})
 resources_cfg.setdefault("genetic_maps_tar", "resources/genetic_maps.b38.tar.gz")
 resources_cfg.setdefault("genetic_maps_dir", "resources/maps")
 
+phasing_cfg = config.setdefault("phasing", {})
+phase_common_variants_cfg = phasing_cfg.setdefault("phase_common_variants", {})
+
 # Autosomal chromosomes (1–22)
 CHROMOSOMES = [f"chr{i}" for i in range(1, 23)]
+
+FILTER_MAF = phase_common_variants_cfg.setdefault("filter_maf", 0.001)
 
 MAPS_TAR = Path(config["resources"]["genetic_maps_tar"])
 MAPS_DIR = Path(config["resources"]["genetic_maps_dir"])
@@ -80,4 +85,54 @@ rule unpack_genetic_map:
         """
         mkdir -p {params.maps_dir}
         tar -xzf {input.tar} -C {params.maps_dir} {wildcards.chr}.b38.gmap.gz >{log} 2>&1
+        """
+
+
+rule phase_common_variants:
+    """
+    Perform common variant haplotype phasing on a per-chromosome basis using SHAPEIT5.
+
+    Executes ``SHAPEIT5_phase_common`` on an individual chromosome VCF using
+    a chromosome-specific genetic map, followed by indexing of the output VCF.
+
+    :input vcf: Unphased per-chromosome VCF file.
+    :input csi: CSI index for the unphased per-chromosome VCF.
+    :input gmap: Recombination genetic map file for the target chromosome.
+    :output bcf: Phased multi-sample BCF file for the target chromosome.
+    :output csi: CSI index file for the phased BCF.
+    :param region: Chromosome region target identifier passed to SHAPEIT5.
+    :param filter_maf: Minor allele frequency threshold for filtering target variants.
+
+    """
+    input:
+        vcf="results/phasing/split/all_samples_{chr}.vcf.gz",
+        csi="results/phasing/split/all_samples_{chr}.vcf.gz.csi",
+        gmap=MAPS_DIR / "{chr}.b38.gmap.gz",
+    output:
+        bcf=protected("results/phasing/phased/phased_{chr}.bcf"),
+        csi=protected("results/phasing/phased/phased_{chr}.bcf.csi"),
+    log:
+        "logs/phase_common_variants/{chr}.log",
+    benchmark:
+        "benchmarks/phase_common_variants/{chr}.tsv"
+    conda:
+        "../envs/phasing.yaml"
+    threads: 4
+    resources:
+        mem_mb=8000,
+        runtime=120,
+    params:
+        region="{chr}",
+        filter_maf=FILTER_MAF,
+    message:
+        "Running SHAPEIT5_phase_common for chromosome {wildcards.chr}"
+    shell:
+        """
+        SHAPEIT5_phase_common \
+            --input {input.vcf} \
+            --map {input.gmap} \
+            --region {params.region} \
+            --filter-maf {params.filter_maf} \
+            --output {output.bcf} \
+            --thread {threads} >{log} 2>&1
         """
