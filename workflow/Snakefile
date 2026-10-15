@@ -70,7 +70,7 @@ rule all:
 rule all_test:
     default_target: False
     input:
-        "results/merged/all_samples.vcf.gz",
-        "results/merged/all_samples.vcf.gz.csi",
+        "results/variant_processing/merged/all_samples.vcf.gz",
+        "results/variant_processing/merged/all_samples.vcf.gz.csi",
         expand("results/phasing/phased/phased_chr{i}.bcf", i=[3, 6, 8, 21, 22]),
         expand("results/phasing/phased/phased_chr{i}.bcf.csi", i=[3, 6, 8, 21, 22]),

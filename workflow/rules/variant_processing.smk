@@ -17,12 +17,12 @@ rule concat_sample_variants:
         snps=lambda wildcards: SAMPLES.loc[(wildcards.sample, "snp"), "vcf_path"],
         indels=lambda wildcards: SAMPLES.loc[(wildcards.sample, "indel"), "vcf_path"],
     output:
-        vcf="results/concat/{sample}.vcf.gz",
-        csi="results/concat/{sample}.vcf.gz.csi",
+        vcf="results/variant_processing/concat/{sample}.vcf.gz",
+        csi="results/variant_processing/concat/{sample}.vcf.gz.csi",
     log:
-        "logs/concat_sample_variants/{sample}.log",
+        "logs/variant_processing/concat_sample_variants/{sample}.log",
     benchmark:
-        "benchmarks/concat_sample_variants/{sample}.tsv"
+        "benchmarks/variant_processing/concat_sample_variants/{sample}.tsv"
     shadow:
         "minimal"
     conda:
@@ -54,17 +54,21 @@ rule merge_and_sort_samples:
     :output csi: Index file for the merged multi-sample VCF.
     """
     input:
-        vcfs=expand("results/concat/{sample}.vcf.gz", sample=SAMPLES["sample"].unique()),
+        vcfs=expand(
+            "results/variant_processing/concat/{sample}.vcf.gz",
+            sample=SAMPLES["sample"].unique(),
+        ),
         csis=expand(
-            "results/concat/{sample}.vcf.gz.csi", sample=SAMPLES["sample"].unique()
+            "results/variant_processing/concat/{sample}.vcf.gz.csi",
+            sample=SAMPLES["sample"].unique(),
         ),
     output:
-        vcf=protected("results/merged/all_samples.vcf.gz"),
-        csi=protected("results/merged/all_samples.vcf.gz.csi"),
+        vcf=protected("results/variant_processing/merged/all_samples.vcf.gz"),
+        csi=protected("results/variant_processing/merged/all_samples.vcf.gz.csi"),
     log:
-        "logs/merge_and_sort_samples/all_samples.log",
+        "logs/variant_processing/merge_and_sort_samples/all_samples.log",
     benchmark:
-        "benchmarks/merge_and_sort_samples/all_samples.tsv"
+        "benchmarks/variant_processing/merge_and_sort_samples/all_samples.tsv"
     conda:
         "../envs/variant_processing.yaml"
     threads: 4

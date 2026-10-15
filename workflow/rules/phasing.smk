@@ -30,15 +30,15 @@ rule split_vcf_by_chr:
     :output csi: CSI index file for the per-chromosome VCF.
     """
     input:
-        vcf="results/merged/all_samples.vcf.gz",
-        csi="results/merged/all_samples.vcf.gz.csi",
+        vcf="results/variant_processing/merged/all_samples.vcf.gz",
+        csi="results/variant_processing/merged/all_samples.vcf.gz.csi",
     output:
         vcf=temp("results/phasing/split/all_samples_{chr}.vcf.gz"),
         csi=temp("results/phasing/split/all_samples_{chr}.vcf.gz.csi"),
     log:
-        "logs/split_vcf_by_chr/{chr}.log",
+        "logs/phasing/split_vcf_by_chr/{chr}.log",
     benchmark:
-        "benchmarks/split_vcf_by_chr/{chr}.tsv"
+        "benchmarks/phasing/split_vcf_by_chr/{chr}.tsv"
     conda:
         "../envs/phasing.yaml"
     threads: 2
@@ -68,9 +68,9 @@ rule unpack_genetic_map:
     output:
         gmap=MAPS_DIR / "{chr}.b38.gmap.gz",
     log:
-        "logs/unpack_genetic_map/{chr}.log",
+        "logs/phasing/unpack_genetic_map/{chr}.log",
     benchmark:
-        "benchmarks/unpack_genetic_map/{chr}.tsv"
+        "benchmarks/phasing/unpack_genetic_map/{chr}.tsv"
     conda:
         "../envs/phasing.yaml"
     threads: 1
@@ -112,9 +112,9 @@ rule phase_common_variants:
         bcf=protected("results/phasing/phased/phased_{chr}.bcf"),
         csi=protected("results/phasing/phased/phased_{chr}.bcf.csi"),
     log:
-        "logs/phase_common_variants/{chr}.log",
+        "logs/phasing/phase_common_variants/{chr}.log",
     benchmark:
-        "benchmarks/phase_common_variants/{chr}.tsv"
+        "benchmarks/phasing/phase_common_variants/{chr}.tsv"
     conda:
         "../envs/phasing.yaml"
     threads: 4

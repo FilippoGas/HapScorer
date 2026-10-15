@@ -57,13 +57,13 @@ jobs:
       - name: Validate merge_and_sort_samples rule output
         run: |
           # Checking for file existence
-          test -f ".test/results/merged/all_samples.vcf.gz"
-          test -f ".test/expected/merged/all_samples.vcf.gz"
+          test -f ".test/results/variant_processing/merged/all_samples.vcf.gz"
+          test -f ".test/expected/variant_processing/merged/all_samples.vcf.gz"
 
           # Comparison with the one in the expected directory
           diff -u \
-            <(bcftools view -H .test/results/merged/all_samples.vcf.gz) \
-            <(bcftools view -H .test/expected/merged/all_samples.vcf.gz)
+            <(bcftools view -H .test/results/variant_processing/merged/all_samples.vcf.gz) \
+            <(bcftools view -H .test/expected/variant_processing/merged/all_samples.vcf.gz)
 
       - name: Validate phase_common_variants rule output
         run: |
