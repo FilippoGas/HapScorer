@@ -5,9 +5,11 @@ benchmarks/**
 data/**
 .snakemake
 .snakemake/**
-.test/benchmarks/*
-.test/logs/*
-.test/results/*
+.test/benchmarks/**
+.test/logs/**
+.test/resources/**
+!.test/resources/genetic_maps.b38.tar.gz
+.test/results/**
 workflow/notebooks/.ipynb_checkpoints/**
 **/.Rhistory
 **/*.Rproj

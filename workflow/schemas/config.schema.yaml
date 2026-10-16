@@ -10,11 +10,38 @@ properties:
     type: string
     description: "Path to the TSV file containing the sample table."
 
+  resources:
+    type: object
+    description: "Paths for external static reference resources and genetic maps."
+    properties:
+      genetic_maps_tar:
+        type: string
+        description: "Path to the bundled tarball containing per-chromosome genetic maps."
+      genetic_maps_dir:
+        type: string
+        description: "Directory where extracted genetic maps are stored."
+
   # variant_processing:
   #   type: object
   #   description: "Processing parameters for genomic variants."
+
+  phasing:
+    type: object
+    description: "Configuration for phasing pipeline steps."
+    properties:
+      phase_common_variants:
+        type: object
+        description: "Parameters for the phase_common rule."
+        properties:
+          filter_maf:
+            type: number
+            minimum: 0.0
+            maximum: 0.5
+            description: "MAF threshold for filtering target variants in SHAPEIT5."
+            default: 0.001
 
 # Top-level mandatory fields in config.yaml
 required:
   - samples
   # - variant_processing
+  # - phasing

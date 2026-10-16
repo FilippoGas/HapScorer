@@ -6,6 +6,14 @@
 
 # --- Input Files & Metadata ---
 samples: "config/samples.tsv"
+# resources:
+#   genetic_maps_tar: "resources/genetic_maps.b38.tar.gz"
+#   genetic_maps_dir: "resources/maps"
 
 # --- Variant Processing Rules Configuration ---
 # variant_processing:
+
+# --- Phasing Rules Configuration ---
+phasing:
+  phase_common_variants:
+    filter_maf: 0.01

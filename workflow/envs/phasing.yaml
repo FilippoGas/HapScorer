@@ -1,0 +1,10 @@
+# workflow/envs/phasing.yaml
+
+name: phasing
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+dependencies:
+  - shapeit5=5.1.1
+  - bcftools=1.24

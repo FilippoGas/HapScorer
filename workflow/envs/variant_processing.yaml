@@ -1,7 +1,9 @@
-# workflow/envs/bfctools.yaml
+# workflow/envs/variant_processing.yaml
 
+name: variant_processing
 channels:
   - conda-forge
   - bioconda
+  - nodefaults
 dependencies:
   - bcftools=1.24

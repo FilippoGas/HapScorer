@@ -5,10 +5,11 @@
 # https://snakemake.readthedocs.io/en/stable/snakefiles/best_practices.html,
 # in particular regarding the standardized folder structure mentioned there.
 
-# import basic packages
+# global import basic packages
 # -----------------------------------------------------
 import pandas as pd
 
+from pathlib import Path
 from snakemake.utils import validate
 
 
@@ -40,6 +41,7 @@ SAMPLES = samples_df.set_index(["sample", "var_type"], drop=False)
 # load helper functions, data structures, and rule definitions
 # -----------------------------------------------------
 include: "rules/variant_processing.smk"
+include: "rules/phasing.smk"
 
 
 # optional messages, log and error handling
@@ -61,5 +63,14 @@ onerror:
 rule all:
     default_target: True
     input:
-        "results/merged/all_samples.vcf.gz",
-        "results/merged/all_samples.vcf.gz.csi",
+        expand("results/phasing/phased/phased_chr{i}.vcf.gz", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/phased_chr{i}.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
+
+
+rule all_test:
+    default_target: False
+    input:
+        "results/variant_processing/merged/all_samples.vcf.gz",
+        "results/variant_processing/merged/all_samples.vcf.gz.csi",
+        expand("results/phasing/phased/phased_chr{i}.vcf.gz", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/phased_chr{i}.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
