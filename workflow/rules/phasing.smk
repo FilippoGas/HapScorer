@@ -33,8 +33,8 @@ rule split_vcf_by_chr:
         vcf="results/variant_processing/merged/all_samples.vcf.gz",
         csi="results/variant_processing/merged/all_samples.vcf.gz.csi",
     output:
-        vcf=temp("results/phasing/split/all_samples_{chr}.vcf.gz"),
-        csi=temp("results/phasing/split/all_samples_{chr}.vcf.gz.csi"),
+        vcf=temp("results/phasing/split/{chr}.vcf.gz"),
+        csi=temp("results/phasing/split/{chr}.vcf.gz.csi"),
     log:
         "logs/phasing/split_vcf_by_chr/{chr}.log",
     benchmark:
@@ -105,12 +105,12 @@ rule phase_common_variants:
 
     """
     input:
-        vcf="results/phasing/split/all_samples_{chr}.vcf.gz",
-        csi="results/phasing/split/all_samples_{chr}.vcf.gz.csi",
+        vcf="results/phasing/split/{chr}.vcf.gz",
+        csi="results/phasing/split/{chr}.vcf.gz.csi",
         gmap=MAPS_DIR / "{chr}.b38.gmap.gz",
     output:
-        bcf=temp("results/phasing/phased/phased_{chr}.bcf"),
-        csi=temp("results/phasing/phased/phased_{chr}.bcf.csi"),
+        bcf=temp("results/phasing/phased/{chr}.phased.bcf"),
+        csi=temp("results/phasing/phased/{chr}.phased.bcf.csi"),
     log:
         "logs/phasing/phase_common_variants/{chr}.log",
     benchmark:
@@ -148,11 +148,11 @@ rule convert_phased_bcf_to_vcf:
     :output csi: CSI index for the compressed phased VCF file.
     """
     input:
-        bcf="results/phasing/phased/phased_{chr}.bcf",
-        csi="results/phasing/phased/phased_{chr}.bcf.csi",
+        bcf="results/phasing/phased/{chr}.phased.bcf",
+        csi="results/phasing/phased/{chr}.phased.bcf.csi",
     output:
-        vcf=protected("results/phasing/phased/phased_{chr}.vcf.gz"),
-        csi=protected("results/phasing/phased/phased_{chr}.vcf.gz.csi"),
+        vcf=protected("results/phasing/phased/{chr}.phased.vcf.gz"),
+        csi=protected("results/phasing/phased/{chr}.phased.vcf.gz.csi"),
     log:
         "logs/phasing/convert_phased_bcf_to_vcf/{chr}.log",
     benchmark:

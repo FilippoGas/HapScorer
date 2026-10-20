@@ -63,8 +63,8 @@ onerror:
 rule all:
     default_target: True
     input:
-        expand("results/phasing/phased/phased_chr{i}.vcf.gz", i=[3, 6, 8, 21, 22]),
-        expand("results/phasing/phased/phased_chr{i}.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/chr{i}.phased.vcf.gz", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/chr{i}.phased.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
 
 
 rule all_test:
@@ -72,5 +72,5 @@ rule all_test:
     input:
         "results/variant_processing/merged/all_samples.vcf.gz",
         "results/variant_processing/merged/all_samples.vcf.gz.csi",
-        expand("results/phasing/phased/phased_chr{i}.vcf.gz", i=[3, 6, 8, 21, 22]),
-        expand("results/phasing/phased/phased_chr{i}.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/chr{i}.phased.vcf.gz", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/chr{i}.phased.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
