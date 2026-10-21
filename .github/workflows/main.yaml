@@ -73,11 +73,11 @@ jobs:
             echo "Evaluating genomic variant concordance for chromosome ${chr}..."
 
             # Checking for file existence
-            test -f ".test/results/phasing/phased/phased_${chr}.vcf.gz"
-            test -f ".test/results/phasing/phased/phased_${chr}.vcf.gz.csi"
+            test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz"
+            test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz.csi"
 
             # Intersect output and reference compressed VCF files and assert zero dataset-exclusive variants
-            bcftools isec -p "isec_${chr}" ".test/results/phasing/phased/phased_${chr}.vcf.gz" ".test/expected/phasing/phased/phased_${chr}.vcf.gz"
+            bcftools isec -p "isec_${chr}" ".test/results/phasing/phased/${chr}.phased.vcf.gz" ".test/expected/phasing/phased/${chr}.phased.vcf.gz"
             [ $(bcftools view -H "isec_${chr}/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_${chr}/0001.vcf" | wc -l) -eq 0 ]
             rm -rf "isec_${chr}"
           done
