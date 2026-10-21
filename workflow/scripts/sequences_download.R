@@ -1,3 +1,5 @@
+# workflow/scripts/sequences_download.R
+
 # Filippo Gastaldello - 29/04/24
 
 # Use biomaRt to download annotations and sequences of all human protein coding

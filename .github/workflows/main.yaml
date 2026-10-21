@@ -82,6 +82,17 @@ jobs:
             rm -rf "isec_${chr}"
           done
 
+      - name: Set up Conda Environment for R Validation
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          environment-file: workflow/envs/reference_data.yaml
+          activate-environment: reference_data
+          auto-activate-base: false
+
+      - name: Validate Generated Reference Data
+        run: |
+          conda run -n reference_data Rscript .github/scripts/validate_reference_data.R .test
+
       - name: Test report
         uses: snakemake/snakemake-github-action@v2
         with:
