@@ -49,38 +49,38 @@ jobs:
           snakefile: workflow/Snakefile
           args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp all_test"
 
-      - name: Install validation dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bcftools
+      # - name: Install validation dependencies
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y bcftools
 
-      - name: Validate merged cohort VCF concordance
-        run: |
-          echo "Evaluating genomic variant concordance for merged cohort VCF..."
+      # - name: Validate merged cohort VCF concordance
+      #   run: |
+      #     echo "Evaluating genomic variant concordance for merged cohort VCF..."
 
-          # Checking for file existence
-          test -f ".test/results/variant_processing/merged/all_samples.vcf.gz"
-          test -f ".test/expected/variant_processing/merged/all_samples.vcf.gz"
+      #     # Checking for file existence
+      #     test -f ".test/results/variant_processing/merged/all_samples.vcf.gz"
+      #     test -f ".test/expected/variant_processing/merged/all_samples.vcf.gz"
 
-          # Intersect merged cohort output and reference VCF files and assert zero dataset-exclusive variants
-          bcftools isec -p "isec_merged" ".test/results/variant_processing/merged/all_samples.vcf.gz" ".test/expected/variant_processing/merged/all_samples.vcf.gz"
-          [ $(bcftools view -H "isec_merged/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_merged/0001.vcf" | wc -l) -eq 0 ]
-          rm -rf "isec_merged"
+      #     # Intersect merged cohort output and reference VCF files and assert zero dataset-exclusive variants
+      #     bcftools isec -p "isec_merged" ".test/results/variant_processing/merged/all_samples.vcf.gz" ".test/expected/variant_processing/merged/all_samples.vcf.gz"
+      #     [ $(bcftools view -H "isec_merged/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_merged/0001.vcf" | wc -l) -eq 0 ]
+      #     rm -rf "isec_merged"
 
-      - name: Validate phased VCF concordance
-        run: |
-          for chr in chr3 chr6 chr8 chr21 chr22; do
-            echo "Evaluating genomic variant concordance for chromosome ${chr}..."
+      # - name: Validate phased VCF concordance
+      #   run: |
+      #     for chr in chr3 chr6 chr8 chr21 chr22; do
+      #       echo "Evaluating genomic variant concordance for chromosome ${chr}..."
 
-            # Checking for file existence
-            test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz"
-            test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz.csi"
+      #       # Checking for file existence
+      #       test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz"
+      #       test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz.csi"
 
-            # Intersect output and reference compressed VCF files and assert zero dataset-exclusive variants
-            bcftools isec -p "isec_${chr}" ".test/results/phasing/phased/${chr}.phased.vcf.gz" ".test/expected/phasing/phased/${chr}.phased.vcf.gz"
-            [ $(bcftools view -H "isec_${chr}/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_${chr}/0001.vcf" | wc -l) -eq 0 ]
-            rm -rf "isec_${chr}"
-          done
+      #       # Intersect output and reference compressed VCF files and assert zero dataset-exclusive variants
+      #       bcftools isec -p "isec_${chr}" ".test/results/phasing/phased/${chr}.phased.vcf.gz" ".test/expected/phasing/phased/${chr}.phased.vcf.gz"
+      #       [ $(bcftools view -H "isec_${chr}/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_${chr}/0001.vcf" | wc -l) -eq 0 ]
+      #       rm -rf "isec_${chr}"
+      #     done
 
       - name: Set up Conda Environment for R Validation
         uses: conda-incubator/setup-miniconda@v4

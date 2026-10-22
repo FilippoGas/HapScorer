@@ -8,6 +8,9 @@
 library(tidyverse)
 library(biomaRt)
 
+options(timeout = 300)
+httr::set_config(httr::config(connecttimeout = 60, timeout = 300))
+
 ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 113)
 
 ensembl_filters <- listFilters(ensembl)
