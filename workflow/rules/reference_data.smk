@@ -26,6 +26,7 @@ rule download_wt_sequences:
         "logs/reference_data/download_wt_sequences.log",
     benchmark:
         "benchmarks/reference_data/download_wt_sequences.tsv"
+    retries: 3
     conda:
         "../envs/reference_data.yaml"
     threads: 1
