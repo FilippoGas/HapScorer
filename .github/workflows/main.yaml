@@ -47,7 +47,7 @@ jobs:
         with:
           directory: .test
           snakefile: workflow/Snakefile
-          args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp all_test"
+          args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp --retries 5 all_test"
 
       # - name: Install validation dependencies
       #   run: |

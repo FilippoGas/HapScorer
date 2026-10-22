@@ -76,7 +76,7 @@ sequences_5utr <- data.frame('5utr' = character(),
 sequences_aa <- data.frame(peptide = character(),
                         ensembl_transcript_id = character())
 # get sequence for every transcript (cycle at batches of size 'stepsize' transcripts to avoid time out)
-stepsize <- 10000; start <- 1; end <- stepsize; done <- FALSE
+stepsize <- 1000; start <- 1; end <- stepsize; done <- FALSE
 
 # time tracking
 start_time <- Sys.time()
@@ -113,6 +113,7 @@ while (!done) {
   cat(paste("Downloaded", end, "of", length(unique(protein_coding_transcripts$ensembl_transcript_id)), "sequences in", round(seconds_to_period(duration), 2)," \n"))
 
   start <- end+1; end <- end+stepsize
+  Sys.sleep(2)
 }
 
 # print total elapsed time
