@@ -11,7 +11,10 @@ library(biomaRt)
 options(timeout = 300)
 httr::set_config(httr::config(connecttimeout = 60, timeout = 300))
 
-ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 113)
+# ensembl <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 113)
+ensembl <- useMart(biomart = "ENSEMBL_MART_ENSEMBL",
+                   dataset = "hsapiens_gene_ensembl",
+                   host    = "https://oct2024.archive.ensembl.org")
 
 ensembl_filters <- listFilters(ensembl)
 ensembl_attributes <- listAttributes(ensembl)
