@@ -74,10 +74,10 @@ rule all:
 rule all_test:
     default_target: False
     input:
-        # "results/variant_processing/merged/all_samples.vcf.gz",
-        # "results/variant_processing/merged/all_samples.vcf.gz.csi",
-        # expand("results/phasing/phased/chr{i}.phased.vcf.gz", i=[3, 6, 8, 21, 22]),
-        # expand("results/phasing/phased/chr{i}.phased.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
+        "results/variant_processing/merged/all_samples.vcf.gz",
+        "results/variant_processing/merged/all_samples.vcf.gz.csi",
+        expand("results/phasing/phased/chr{i}.phased.vcf.gz", i=[3, 6, 8, 21, 22]),
+        expand("results/phasing/phased/chr{i}.phased.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
         "resources/reference_data/protein_coding_transcripts.csv",
         "resources/reference_data/wt_aa.csv",
         "resources/reference_data/wt_cds.csv",

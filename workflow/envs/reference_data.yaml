@@ -1,4 +1,4 @@
-# workflow/envs/phasing.yaml
+# workflow/envs/reference_data.yaml
 
 name: reference_data
 channels:
@@ -6,10 +6,8 @@ channels:
   - bioconda
   - nodefaults
 dependencies:
-  - r-base=4.5.3
-  - r-tidyverse=2.0.0
-  - r-dbplyr=2.6.0
-  - r-vcfr=1.16.0
-  - r-biocmanager=1.30.27
-  - bioconductor-biostrings=2.80.2
-  - bioconductor-biomart=2.68.0
+  - python>=3.14.8
+  - pandas>=2.3.3
+  - numpy>=2.5.4
+  - biopython
+  - coreutils

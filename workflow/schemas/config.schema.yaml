@@ -20,6 +20,9 @@ properties:
       genetic_maps_dir:
         type: string
         description: "Directory where extracted genetic maps are stored."
+      ref_data_dir:
+        type: string
+        description: "Directory path where reference data files are stored."
 
   # variant_processing:
   #   type: object
@@ -44,15 +47,9 @@ properties:
     type: object
     description: "Configuration settings for reference data retrieval."
     properties:
-      ensembl_biomart:
+      release:
         type: string
-        description: "Ensembl BioMart database name."
-      ensembl_dataset:
-        type: string
-        description: "Ensembl dataset identifier."
-      ensembl_host:
-        type: string
-        description: "URL host for Ensembl Mart service or archive (can be found on the official Ensembl archives page: 'https://www.ensembl.org/help/articles/archives')."
+        description: "Ensembl release version."
       download_wt_sequences:
         type: object
         description: "Parameters specific to the download_wt_sequences rule."
@@ -77,14 +74,6 @@ properties:
               chromosome_regex:
                 type: ["string", "null"]
                 description: "Regular expression pattern for matching valid chromosome names."
-          batch_size:
-            type: integer
-            minimum: 1
-            description: "Number of transcripts per biomaRt query batch."
-          sleep_delay:
-            type: integer
-            minimum: 0
-            description: "Delay in seconds between biomaRt query batches."
 
 # Top-level mandatory fields in config.yaml
 required:

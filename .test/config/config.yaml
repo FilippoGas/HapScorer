@@ -20,9 +20,7 @@ phasing:
 
 # --- Reference Data Rules Configuration ---
 reference_data:
-  ensembl_biomart: "ENSEMBL_MART_ENSEMBL"
-  ensembl_dataset: "hsapiens_gene_ensembl"
-  ensembl_host: "https://oct2024.archive.ensembl.org"
+  release: "113"
 
   download_wt_sequences:
     transcript_biotype: "protein_coding"
@@ -34,5 +32,3 @@ reference_data:
       excluded_chromosomes:
         - "MT"
       chromosome_regex: "^\\d{1,2}$"
-    batch_size: 1000
-    sleep_delay: 2
