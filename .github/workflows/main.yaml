@@ -59,7 +59,7 @@ jobs:
       - name: Validate merged cohort VCF concordance
         shell: bash -el {0}
         run: |
-          bash ./scripts/validate_vcf.sh \
+          bash .github/scripts/validate_vcf.sh \
             ".test/results/variant_processing/merged/all_samples.vcf.gz" \
             ".test/expected/variant_processing/merged/all_samples.vcf.gz" \
             "merged_cohort"
@@ -71,7 +71,7 @@ jobs:
             # Assert index existence prior to validation
             test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz.csi" || { echo "Missing .csi index for ${chr}"; exit 1; }
 
-            bash ./scripts/validate_vcf.sh \
+            bash .github/scripts/validate_vcf.sh \
               ".test/results/phasing/phased/${chr}.phased.vcf.gz" \
               ".test/expected/phasing/phased/${chr}.phased.vcf.gz" \
               "phased_${chr}"
