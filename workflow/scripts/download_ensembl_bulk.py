@@ -134,16 +134,16 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
     print(f"[{file_name}] Initiating download from: {url}", flush=True)
 
     try:
-        # 1. Download the target data file
+        # Download the target data file
         hook = make_progress_hook(file_name)
         urllib.request.urlretrieve(url, output_file, reporthook=hook)
         print(f"[{file_name}] Download completed.", flush=True)
 
-        # 2. Download the corresponding Ensembl CHECKSUMS file
+        # Download the corresponding Ensembl CHECKSUMS file
         print(f"[{file_name}] Fetching upstream CHECKSUMS file...", flush=True)
         urllib.request.urlretrieve(checksum_url, tmp_checksum_file)
 
-        # 3. Parse the expected checksum (UNIX sum) from the downloaded text file
+        # Parse the expected checksum (UNIX sum) from the downloaded text file
         expected_sum_line = ""
         with open(tmp_checksum_file, "r") as chk_f:
             for line in chk_f:
@@ -157,7 +157,7 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
         expected_checksum_value = expected_sum_line.split()[0]
         expected_blocks = expected_sum_line.split()[1]
 
-        # 4. Compute the local UNIX sum using the system subsystem
+        # Compute the local UNIX sum using the system subsystem
         print(f"[{file_name}] Verifying network transfer integrity (Legacy 'sum')...", flush=True)
         sum_process = subprocess.run(["sum", str(output_file)], capture_output=True, text=True, check=True)
         actual_checksum_value, actual_blocks = sum_process.stdout.strip().split()[:2]
@@ -171,7 +171,7 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
 
         print(f"[{file_name}] Transfer integrity verified successfully.", flush=True)
 
-        # 5. Generate a robust cryptographic hash for local provenance
+        # Generate a robust cryptographic hash for local provenance
         print(f"[{file_name}] Generating secure SHA-256 digest for local data provenance...", flush=True)
         sha256_digest = generate_sha256(output_file)
         sha256_file = Path(f"{output_path}.sha256")

@@ -6,8 +6,8 @@ channels:
   - bioconda
   - nodefaults
 dependencies:
-  - python>=3.14.8
-  - pandas>=2.3.3
-  - numpy>=2.5.4
-  - biopython
-  - coreutils
+  - python=3.15.1
+  - pandas=3.1.0
+  - numpy=2.5.4
+  - biopython=1.88
+  - coreutils=9.12
