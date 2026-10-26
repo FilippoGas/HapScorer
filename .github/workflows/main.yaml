@@ -49,38 +49,33 @@ jobs:
           snakefile: workflow/Snakefile
           args: "--profile profiles/test --conda-cleanup-pkgs cache --all-temp --retries 5 all_test"
 
-      # - name: Install validation dependencies
-      #   run: |
-      #     sudo apt-get update
-      #     sudo apt-get install -y bcftools
+      - name: Set up Conda Environment for Variant Validation
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          environment-file: workflow/envs/variant_processing.yaml
+          activate-environment: variant_processing
+          auto-activate-base: false
 
-      # - name: Validate merged cohort VCF concordance
-      #   run: |
-      #     echo "Evaluating genomic variant concordance for merged cohort VCF..."
+      - name: Validate merged cohort VCF concordance
+        shell: bash -el {0}
+        run: |
+          bash ./scripts/validate_vcf.sh \
+            ".test/results/variant_processing/merged/all_samples.vcf.gz" \
+            ".test/expected/variant_processing/merged/all_samples.vcf.gz" \
+            "merged_cohort"
 
-      #     # Checking for file existence
-      #     test -f ".test/results/variant_processing/merged/all_samples.vcf.gz"
-      #     test -f ".test/expected/variant_processing/merged/all_samples.vcf.gz"
+      - name: Validate phased VCF concordance
+        shell: bash -el {0}
+        run: |
+          for chr in chr3 chr6 chr8 chr21 chr22; do
+            # Assert index existence prior to validation
+            test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz.csi" || { echo "Missing .csi index for ${chr}"; exit 1; }
 
-      #     # Intersect merged cohort output and reference VCF files and assert zero dataset-exclusive variants
-      #     bcftools isec -p "isec_merged" ".test/results/variant_processing/merged/all_samples.vcf.gz" ".test/expected/variant_processing/merged/all_samples.vcf.gz"
-      #     [ $(bcftools view -H "isec_merged/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_merged/0001.vcf" | wc -l) -eq 0 ]
-      #     rm -rf "isec_merged"
-
-      # - name: Validate phased VCF concordance
-      #   run: |
-      #     for chr in chr3 chr6 chr8 chr21 chr22; do
-      #       echo "Evaluating genomic variant concordance for chromosome ${chr}..."
-
-      #       # Checking for file existence
-      #       test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz"
-      #       test -f ".test/results/phasing/phased/${chr}.phased.vcf.gz.csi"
-
-      #       # Intersect output and reference compressed VCF files and assert zero dataset-exclusive variants
-      #       bcftools isec -p "isec_${chr}" ".test/results/phasing/phased/${chr}.phased.vcf.gz" ".test/expected/phasing/phased/${chr}.phased.vcf.gz"
-      #       [ $(bcftools view -H "isec_${chr}/0000.vcf" | wc -l) -eq 0 ] && [ $(bcftools view -H "isec_${chr}/0001.vcf" | wc -l) -eq 0 ]
-      #       rm -rf "isec_${chr}"
-      #     done
+            bash ./scripts/validate_vcf.sh \
+              ".test/results/phasing/phased/${chr}.phased.vcf.gz" \
+              ".test/expected/phasing/phased/${chr}.phased.vcf.gz" \
+              "phased_${chr}"
+          done
 
       - name: Set up Conda Environment for Reference Data Validation
         uses: conda-incubator/setup-miniconda@v4
@@ -90,8 +85,9 @@ jobs:
           auto-activate-base: false
 
       - name: Validate Generated Reference Data
+        shell: bash -el {0}
         run: |
-          conda run -n reference_data python .github/scripts/validate_reference_data.py .test
+          python .github/scripts/validate_reference_data.py .test
 
       - name: Test report
         uses: snakemake/snakemake-github-action@v2
