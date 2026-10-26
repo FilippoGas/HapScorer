@@ -155,6 +155,15 @@ def map_utr(
 
 
 # =============================================================================
+# CONSTANTS
+# =============================================================================
+
+
+# Map of unique 2-base partial codons
+TWO_BASE_MAP = {"CC": "P", "AC": "T", "GT": "V", "GC": "A", "GG": "G", "CT": "L", "TC": "S", "CG": "R"}
+
+
+# =============================================================================
 # MAIN LOGIC
 # =============================================================================
 
@@ -290,9 +299,10 @@ def main():
             if utr5 and utr3 and cds:
                 seq_records.append({"ensembl_transcript_id": tx, "5utr": utr5, "coding": cds, "3utr": utr3})
 
-                # Handle Stop Codons for peptides
-                last_codon = cds[-3:]
-                final_pep = pep + "*" if last_codon in ["TAA", "TAG", "TGA"] else pep
+                # Handle partial amino acids and Stop Codons for peptides
+                partial_aa = TWO_BASE_MAP.get(cds[-2:], "") if len(cds) % 3 == 2 else ""
+                stop_symbol = "*" if len(cds) >= 3 and len(cds) % 3 == 0 and cds[-3:] in ["TAA", "TAG", "TGA"] else ""
+                final_pep = pep + partial_aa + stop_symbol
                 aa_records.append({"sequence": final_pep, "ensembl_transcript_id": tx})
 
     sequences = pd.DataFrame(seq_records)
