@@ -8,8 +8,8 @@ REF_DIR = Path(res_cfg.setdefault("ref_data_dir", "resources/reference_data"))
 ref_cfg = config.setdefault("reference_data", {})
 ENSEMBL_RELEASE = ref_cfg.setdefault("release", "113")
 
-# --- Rule-specific settings for download_wt_sequences ---
-dl_seq_cfg = ref_cfg.setdefault("download_wt_sequences", {})
+# --- Rule-specific settings for parse_ensembl_bulk_sequences ---
+dl_seq_cfg = ref_cfg.setdefault("parse_ensembl_bulk_sequences", {})
 TRANSCRIPT_BIOTYPE = dl_seq_cfg.setdefault("transcript_biotype", "protein_coding")
 FILTERS = dl_seq_cfg.setdefault(
     "filters",
@@ -19,6 +19,7 @@ FILTERS = dl_seq_cfg.setdefault(
         "chromosome_regex": r"^\d{1,2}$",
     },
 )
+STOP_CODONS = dl_seq_cfg.setdefault("stop_codons", ["TAA", "TAG", "TGA"])
 
 
 rule download_ensembl_bulk_data:
@@ -104,6 +105,7 @@ rule parse_ensembl_bulk_sequences:
     params:
         biotype=TRANSCRIPT_BIOTYPE,
         filters=FILTERS,
+        stop_codons=STOP_CODONS,
     message:
         "Extracting Ensembl wild-type sequences and annotations via pre-downloaded resources"
     script:

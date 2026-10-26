@@ -22,7 +22,7 @@ phasing:
 reference_data:
   release: "113"
 
-  download_wt_sequences:
+  parse_ensembl_bulk_sequences:
     transcript_biotype: "protein_coding"
     filters:
       allowed_tsl:
@@ -32,3 +32,7 @@ reference_data:
       excluded_chromosomes:
         - "MT"
       chromosome_regex: "^\\d{1,2}$"
+    stop_codons:
+      - "TAA"
+      - "TAG"
+      - "TGA"

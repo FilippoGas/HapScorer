@@ -50,9 +50,9 @@ properties:
       release:
         type: string
         description: "Ensembl release version."
-      download_wt_sequences:
+      parse_ensembl_bulk_sequences:
         type: object
-        description: "Parameters specific to the download_wt_sequences rule."
+        description: "Parameters specific to the parse_ensembl_bulk_sequences rule."
         properties:
           transcript_biotype:
             type: string
@@ -74,6 +74,11 @@ properties:
               chromosome_regex:
                 type: ["string", "null"]
                 description: "Regular expression pattern for matching valid chromosome names."
+          stop_codons:
+            type: ["array", "null"]
+            items:
+              type: string
+            description: "List of DNA stop codons used to identify translation termination sites."
 
 # Top-level mandatory fields in config.yaml
 required:

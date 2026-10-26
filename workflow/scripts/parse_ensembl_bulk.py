@@ -187,6 +187,9 @@ def main():
     # Retrieve execution parameters params
     p_biotype = snakemake.params["biotype"]
     p_filters = snakemake.params["filters"]
+    p_stop_codons = snakemake.params.get("stop_codons", ["TAA", "TAG", "TGA"])
+
+    stop_codons_set = set(p_stop_codons)
 
     print("Parsing local Ensembl GTF and FASTA files...\n")
 
@@ -301,7 +304,7 @@ def main():
 
                 # Handle partial amino acids and Stop Codons for peptides
                 partial_aa = TWO_BASE_MAP.get(cds[-2:], "") if len(cds) % 3 == 2 else ""
-                stop_symbol = "*" if len(cds) >= 3 and len(cds) % 3 == 0 and cds[-3:] in ["TAA", "TAG", "TGA"] else ""
+                stop_symbol = "*" if len(cds) >= 3 and len(cds) % 3 == 0 and cds[-3:] in stop_codons_set else ""
                 final_pep = pep + partial_aa + stop_symbol
                 aa_records.append({"sequence": final_pep, "ensembl_transcript_id": tx})
 
