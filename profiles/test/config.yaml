@@ -25,6 +25,10 @@ set-threads:
   unpack_genetic_map: 1
   phase_common_variants: 4
 
+  # workflow/rules/reference_data.smk
+  download_ensembl_bulk_data: 1
+  parse_ensembl_bulk_sequences: 1
+
 # Memory and execution bounds per rule
 set-resources:
   # workflow/rules/variant_processing.smk
@@ -47,6 +51,9 @@ set-resources:
     runtime: 60
 
   # workflow/rules/reference_data.smk
-  download_wt_sequences:
-    mem_mb: 15000
+  download_ensembl_bulk_data:
+    mem_mb: 4000
+    runtime: 60
+  parse_ensembl_bulk_sequences:
+    mem_mb: 7500
     runtime: 60
