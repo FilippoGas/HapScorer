@@ -89,6 +89,18 @@ jobs:
         run: |
           python .github/scripts/validate_reference_data.py .test
 
+      - name: Set up Conda Environment for Haplotype Sequences Validation
+        uses: conda-incubator/setup-miniconda@v4
+        with:
+          environment-file: workflow/envs/haplotype_sequences.yaml
+          activate-environment: haplotype_sequences
+          auto-activate-base: false
+
+      - name: Validate Generated Haplotypes and Genotypes
+        shell: bash -el {0}
+        run: |
+          python .github/scripts/validate_haplotypes.py .test
+
       - name: Test report
         uses: snakemake/snakemake-github-action@v2
         with:

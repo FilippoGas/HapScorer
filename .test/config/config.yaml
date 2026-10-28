@@ -36,3 +36,6 @@ reference_data:
       - "TAA"
       - "TAG"
       - "TGA"
+
+# --- Haplotype Sequences Rules Configuration ---
+# haplotype_sequences:

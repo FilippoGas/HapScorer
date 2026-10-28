@@ -29,6 +29,9 @@ set-threads:
   download_ensembl_bulk_data: 1
   parse_ensembl_bulk_sequences: 1
 
+  # workflow/rules/haplotype_sequences.smk
+  extract_haplotypes_and_genotypes: 4
+
 # Memory and execution bounds per rule
 set-resources:
   # workflow/rules/variant_processing.smk
@@ -57,3 +60,8 @@ set-resources:
   parse_ensembl_bulk_sequences:
     mem_mb: 7500
     runtime: 60
+
+  # workflow/rules/haplotype_sequences.smk
+  extract_haplotypes_and_genotypes:
+    mem_mb: 7500
+    runtime: 30
