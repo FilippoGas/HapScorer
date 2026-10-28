@@ -37,12 +37,17 @@ validate(samples_df, schema="schemas/samples.schema.yaml")
 samples_df["var_type"] = samples_df["var_type"].str.lower()
 SAMPLES = samples_df.set_index(["sample", "var_type"], drop=False)
 
+# Autosomal chromosomes (1–22)
+CHROM = [f"chr{i}" for i in range(1, 23)]
+CHROM_NUMBERS = [str(i) for i in range(1, 23)]
+
 
 # load helper functions, data structures, and rule definitions
 # -----------------------------------------------------
 include: "rules/variant_processing.smk"
 include: "rules/phasing.smk"
 include: "rules/reference_data.smk"
+include: "rules/haplotype_sequences.smk"
 
 
 # optional messages, log and error handling
@@ -64,11 +69,17 @@ onerror:
 rule all:
     default_target: True
     input:
-        expand("results/phasing/phased/chr{i}.phased.vcf.gz", i=[3, 6, 8, 21, 22]),
-        expand("results/phasing/phased/chr{i}.phased.vcf.gz.csi", i=[3, 6, 8, 21, 22]),
         "resources/reference_data/protein_coding_transcripts.csv",
         "resources/reference_data/wt_aa.csv",
         "resources/reference_data/wt_cds.csv",
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/genotypes/chr{i}_genotypes.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
 
 
 rule all_test:
@@ -81,3 +92,11 @@ rule all_test:
         "resources/reference_data/protein_coding_transcripts.csv",
         "resources/reference_data/wt_aa.csv",
         "resources/reference_data/wt_cds.csv",
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/genotypes/chr{i}_genotypes.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
