@@ -80,6 +80,10 @@ rule all:
             "results/haplotype_sequences/genotypes/chr{i}_genotypes.csv",
             i=[3, 6, 8, 21, 22],
         ),
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_nn.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
 
 
 rule all_test:
@@ -98,5 +102,9 @@ rule all_test:
         ),
         expand(
             "results/haplotype_sequences/genotypes/chr{i}_genotypes.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_nn.csv",
             i=[3, 6, 8, 21, 22],
         ),
