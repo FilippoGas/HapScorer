@@ -20,6 +20,9 @@ properties:
       genetic_maps_dir:
         type: string
         description: "Directory where extracted genetic maps are stored."
+      ref_data_dir:
+        type: string
+        description: "Directory path where reference data files are stored."
 
   # variant_processing:
   #   type: object
@@ -40,8 +43,46 @@ properties:
             description: "MAF threshold for filtering target variants in SHAPEIT5."
             default: 0.001
 
+  reference_data:
+    type: object
+    description: "Configuration settings for reference data retrieval."
+    properties:
+      release:
+        type: string
+        description: "Ensembl release version."
+      parse_ensembl_bulk_sequences:
+        type: object
+        description: "Parameters specific to the parse_ensembl_bulk_sequences rule."
+        properties:
+          transcript_biotype:
+            type: string
+            description: "Filter for target transcript biotype."
+          filters:
+            type: ["object", "null"]
+            description: "Declarative filters applied to reference transcripts."
+            properties:
+              allowed_tsl:
+                type: ["array", "null"]
+                items:
+                  type: string
+                description: "List of permitted Transcript Support Levels (e.g., tsl1, tsl2)."
+              excluded_chromosomes:
+                type: ["array", "null"]
+                items:
+                  type: string
+                description: "List of chromosome names to exclude (e.g., MT)."
+              chromosome_regex:
+                type: ["string", "null"]
+                description: "Regular expression pattern for matching valid chromosome names."
+          stop_codons:
+            type: ["array", "null"]
+            items:
+              type: string
+            description: "List of DNA stop codons used to identify translation termination sites."
+
 # Top-level mandatory fields in config.yaml
 required:
   - samples
   # - variant_processing
   # - phasing
+  # - reference_data

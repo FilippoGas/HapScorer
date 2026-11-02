@@ -17,3 +17,22 @@ samples: "config/samples.tsv"
 phasing:
   phase_common_variants:
     filter_maf: 0.01
+
+# --- Reference Data Rules Configuration ---
+reference_data:
+  release: "113"
+
+  parse_ensembl_bulk_sequences:
+    transcript_biotype: "protein_coding"
+    filters:
+      allowed_tsl:
+        - "tsl1"
+        - "tsl2"
+        - "tsl3"
+      excluded_chromosomes:
+        - "MT"
+      chromosome_regex: "^\\d{1,2}$"
+    stop_codons:
+      - "TAA"
+      - "TAG"
+      - "TGA"
