@@ -14,13 +14,13 @@ Supports dual execution modes:
 2. Standalone Command Line Interface (CLI) execution via `argparse` for manual debugging.
 
 Expected Snakemake Inputs (or CLI Arguments):
-    - mutated_cds_csv (--mutated-cds): Path to the dataset containing mutated nucleotide sequences.
+    - **mutated_cds_csv** (`--mutated-cds`): Path to the dataset containing mutated nucleotide sequences.
 
 Expected Snakemake Outputs (or CLI Arguments):
-    - mutated_aa_csv (--out-aa): Path for the generated dataset with translated amino acid sequences.
+    - **mutated_aa_csv** (`--out-aa`): Path for the generated dataset with translated amino acid sequences.
 
 Optional Parameters:
-    - threads (--threads): Number of CPU cores to utilize for multiprocessing (default: 1).
+    - **threads** (`--threads`): Number of CPU cores to utilize for multiprocessing (default: 1).
 """
 
 import argparse

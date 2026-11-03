@@ -12,15 +12,15 @@ Supports dual execution modes:
 2. Standalone Command Line Interface (CLI) execution via `argparse` for manual debugging.
 
 Expected Snakemake Inputs (or CLI Arguments):
-    - haplotypes (--haplotypes): Path to the extracted haplotypes CSV file.
-    - wt_cds (--wt-cds): Path to the canonical reference CDS sequences CSV file.
-    - annotations (--annotations): Path to transcript structural annotations CSV file.
+    - **haplotypes** (`--haplotypes`): Path to the extracted haplotypes CSV file.
+    - **wt_cds** (`--wt-cds`): Path to the canonical reference CDS sequences CSV file.
+    - **annotations** (`--annotations`): Path to transcript structural annotations CSV file.
 
 Expected Snakemake Outputs (or CLI Arguments):
-    - out_mutated (--out-mutated): Path for the generated mutated nucleotide sequences CSV.
+    - **out_mutated** (`--out-mutated`): Path for the generated mutated nucleotide sequences CSV.
 
 Optional Parameters:
-    - threads (--threads): Number of CPU cores to utilize for multiprocessing (default: 1).
+    - **threads** (`--threads`): Number of CPU cores to utilize for multiprocessing (default: 1).
 """
 
 import argparse
@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     Parses command-line arguments for the mutated sequence generation workflow.
 
     Returns:
-        argparse.Namespace: An object containing the parsed execution parameters.
+        args (:obj:`argparse.Namespace`): An object containing the parsed execution parameters.
     """
     parser = argparse.ArgumentParser(description="Generates mutated nucleotide sequences for haplotypes.")
     parser.add_argument("--haplotypes", required=True, help="Path to input haplotypes CSV.")
@@ -69,18 +69,17 @@ def parse_variant(variant_type: str, nuc_change: str) -> Optional[Dict[str, Any]
     regions while filtering out intronic variants containing '+'.
 
     Args:
-        variant_type (str): The variant consequence type (e.g., 'missense_variant').
-        nuc_change (str): HGVS nucleotide change string (e.g., 'c.123A>G', 'c.-15G>A', 'c.*10del').
+        variant_type (:obj:`str`): The variant consequence type (e.g., 'missense_variant').
+        nuc_change (:obj:`str`): HGVS nucleotide change string (e.g., 'c.123A>G', 'c.-15G>A', 'c.*10del').
 
     Returns:
-        Optional[Dict[str, Any]]: A dictionary detailing parsed variant attributes:
-            - variant_type (str): Original variant consequence type.
-            - nucleotide_change (str): Original HGVS string.
-            - pos (int): 1-based relative nucleotide position.
-            - ref (str): Reference nucleotide allele.
-            - alt (str): Alternative nucleotide allele.
-            - desc (str): Variant class ('snp', 'del', or 'ins').
-            Returns None if the variant is intronic or unparseable.
+        variant_attr (:obj:`dict` or :obj:`None`): A dictionary detailing parsed variant attributes, or `None` if the variant is intronic or unparseable:
+            - **variant_type** (:obj:`str`): Original variant consequence type.
+            - **nucleotide_change** (:obj:`str`): Original HGVS string.
+            - **pos** (:obj:`int`): 1-based relative nucleotide position.
+            - **ref** (:obj:`str`): Reference nucleotide allele.
+            - **alt** (:obj:`str`): Alternative nucleotide allele.
+            - **desc** (:obj:`str`): Variant class ('snp', 'del', or 'ins').
     """
     if not nuc_change or "+" in nuc_change:
         return None  # Exclude intronic variants
@@ -174,12 +173,12 @@ def apply_snp(sequence: str, snps: List[Dict[str, Any]], is_5utr: bool) -> str:
     and CDS/3' UTR regions.
 
     Args:
-        sequence (str): The target nucleotide sequence string.
-        snps (List[Dict[str, Any]]): List of parsed SNP variant dictionaries.
-        is_5utr (bool): Flag indicating whether the sequence belongs to the 5' UTR region.
+        sequence (:obj:`str`): The target nucleotide sequence string.
+        snps (:obj:`list` of :obj:`dict`): List of parsed SNP variant dictionaries.
+        is_5utr (:obj:`bool`): Flag indicating whether the sequence belongs to the 5' UTR region.
 
     Returns:
-        str: The updated nucleotide sequence string containing applied substitutions.
+        updated_sequence (:obj:`str`): The updated nucleotide sequence string containing applied substitutions.
     """
     seq_list = list(sequence)
     seq_len = len(sequence)
@@ -199,12 +198,12 @@ def apply_deletion(sequence: str, dels: List[Dict[str, Any]], is_5utr: bool) -> 
     relative positional indexing prior to downstream string cleanup.
 
     Args:
-        sequence (str): The target nucleotide sequence string.
-        dels (List[Dict[str, Any]]): List of parsed deletion variant dictionaries.
-        is_5utr (bool): Flag indicating whether the sequence belongs to the 5' UTR region.
+        sequence (:obj:`str`): The target nucleotide sequence string.
+        dels (:obj:`list` of :obj:`dict`): List of parsed deletion variant dictionaries.
+        is_5utr (:obj:`bool`): Flag indicating whether the sequence belongs to the 5' UTR region.
 
     Returns:
-        str: The sequence string containing 'D' placeholder masks at deleted sites.
+        masked_sequence (:obj:`str`): The sequence string containing 'D' placeholder masks at deleted sites.
     """
     seq_list = list(sequence)
     seq_len = len(sequence)
@@ -226,12 +225,12 @@ def apply_insertion(sequence: str, inss: List[Dict[str, Any]], is_5utr: bool) ->
     the target sequence string, accounting for 5' UTR coordinate mapping.
 
     Args:
-        sequence (str): The target nucleotide sequence string.
-        inss (List[Dict[str, Any]]): List of parsed insertion or duplication variant dictionaries.
-        is_5utr (bool): Flag indicating whether the sequence belongs to the 5' UTR region.
+        sequence (:obj:`str`): The target nucleotide sequence string.
+        inss (:obj:`list` of :obj:`dict`): List of parsed insertion or duplication variant dictionaries.
+        is_5utr (:obj:`bool`): Flag indicating whether the sequence belongs to the 5' UTR region.
 
     Returns:
-        str: The updated sequence string containing inserted nucleotide segments.
+        updated_sequence (:obj:`str`): The updated sequence string containing inserted nucleotide segments.
     """
     sorted_inss = sorted(inss, key=lambda x: x["pos"])
     seq = sequence
@@ -251,13 +250,13 @@ def compute_shift(shift: List[int], inss: List[Dict[str, Any]], dels: List[Dict[
     to evaluate positional shifts of downstream canonical start codons (ATG).
 
     Args:
-        shift (List[int]): Initial coordinate shift vector initialized with zeros.
-        inss (List[Dict[str, Any]]): List of parsed insertion variants in the 5' UTR.
-        dels (List[Dict[str, Any]]): List of parsed deletion variants in the 5' UTR.
+        shift (:obj:`list` of :obj:`int`): Initial coordinate shift vector initialized with zeros.
+        inss (:obj:`list` of :obj:`dict`): List of parsed insertion variants in the 5' UTR.
+        dels (:obj:`list` of :obj:`dict`): List of parsed deletion variants in the 5' UTR.
 
     Returns:
-        List[int]: Updated shift vector mapping original positions to length offsets,
-            with deleted positions represented as None.
+        updated_shift (:obj:`list` of :obj:`int` or :obj:`None`): Updated shift vector mapping original positions to length offsets,
+            with deleted positions represented as `None`.
     """
     shift = list(shift)
     for ins in inss:
@@ -290,17 +289,17 @@ def build_mutated_sequence(wt_sequence: Dict[str, str], variant_types_str: str, 
        stop codon is lost due to mutation.
 
     Args:
-        wt_sequence (Dict[str, str]): Dictionary containing reference sequence domains:
+        wt_sequence (:obj:`dict`): Dictionary containing reference sequence domains:
             '5utr', 'coding', and '3utr'.
-        variant_types_str (str): Comma-separated string of variant consequence types.
-        nuc_change_str (str): Comma-separated string of HGVS nucleotide changes.
+        variant_types_str (:obj:`str`): Comma-separated string of variant consequence types.
+        nuc_change_str (:obj:`str`): Comma-separated string of HGVS nucleotide changes.
 
     Returns:
-        Dict[str, Any]: A dictionary containing mutated sequence evaluation metrics:
-            - nn_sequence (str): Reconstructed mutated nucleotide sequence.
-            - start_gain (bool): Indicates if a novel start codon was gained in the 5' UTR.
-            - multiple_starts_in_5 (bool): Indicates presence of multiple ATG sites in 5' UTR.
-            - stop_loss_3_translated (bool): Indicates translation extension into 3' UTR due to stop-loss
+        mutated_data (:obj:`dict`): A dictionary containing mutated sequence evaluation metrics:
+            - **nn_sequence** (:obj:`str`): Reconstructed mutated nucleotide sequence
+            - **start_gain** (:obj:`bool`): Indicates if a novel start codon was gained in the 5' UTR
+            - **multiple_starts_in_5** (:obj:`bool`): Indicates presence of multiple ATG sites in 5' UTR
+            - **stop_loss_3_translated** (:obj:`bool`): Indicates translation extension into 3' UTR due to stop-loss.
     """
     v_types = [v.strip() for v in str(variant_types_str).split(",") if v.strip()]
     n_changes = [n.strip() for n in str(nuc_change_str).split(",") if n.strip()]
@@ -422,13 +421,13 @@ def process_row(row: Tuple[Any, pd.Series], sequences_dict: Dict[str, Dict[str, 
     mutated sequence construction to `build_mutated_sequence`.
 
     Args:
-        row (Tuple[Any, pandas.Series]): Tuple containing row index and DataFrame Series
+        row (:obj:`tuple` of (:obj:`Any`, :obj:`pandas.Series`)): Tuple containing row index and DataFrame Series
             representing a single haplotype record.
-        sequences_dict (Dict[str, Dict[str, str]]): Lookup dictionary mapping transcript IDs
+        sequences_dict (:obj:`dict`): Lookup dictionary mapping transcript IDs
             to wild-type domain sequences ('coding', '5utr', '3utr').
 
     Returns:
-        Dict[str, Any]: Dictionary containing the haplotype transcript ID and its
+        row_result (:obj:`dict`): Dictionary containing the haplotype transcript ID and its
             reconstructed mutated nucleotide sequence metadata.
     """
     _, data = row
@@ -470,14 +469,11 @@ def run_pipeline(
     merges sequence outputs back into the haplotype metadata, and exports the final CSV dataset.
 
     Args:
-        haplotypes_path (str or pathlib.Path): Path to the input haplotypes metadata CSV file.
-        wt_cds_path (str or pathlib.Path): Path to the reference wild-type CDS sequences CSV file.
-        annotations_path (str or pathlib.Path): Path to the transcript structural annotations CSV file.
-        out_mutated_path (str or pathlib.Path): Output file path for the mutated sequences CSV file.
-        threads (int): Number of CPU worker threads to spawn for multiprocessing.
-
-    Returns:
-        None
+        haplotypes_path (:obj:`str` or :obj:`pathlib.Path`): Path to the input haplotypes metadata CSV file.
+        wt_cds_path (:obj:`str` or :obj:`pathlib.Path`): Path to the reference wild-type CDS sequences CSV file.
+        annotations_path (:obj:`str` or :obj:`pathlib.Path`): Path to the transcript structural annotations CSV file.
+        out_mutated_path (:obj:`str` or :obj:`pathlib.Path`): Output file path for the mutated sequences CSV file.
+        threads (:obj:`int`): Number of CPU worker threads to spawn for multiprocessing.
     """
     haplotypes_path = Path(haplotypes_path)
     wt_cds_path = Path(wt_cds_path)

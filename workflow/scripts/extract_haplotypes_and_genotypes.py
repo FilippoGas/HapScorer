@@ -13,15 +13,15 @@ Supports dual execution modes:
 2. Standalone Command Line Interface (CLI) execution via `argparse` for manual debugging.
 
 Expected Snakemake Inputs (or CLI Arguments):
-    - phased_vcf (--vcf): Path to the phased, bgzipped, and indexed VCF file.
-    - annotations (--annotations): Path to the CSV file containing transcript annotations.
+    - **phased_vcf** (`--vcf`): Path to the phased, bgzipped, and indexed VCF file.
+    - **annotations** (`--annotations`): Path to the CSV file containing transcript annotations.
 
 Expected Snakemake Outputs (or CLI Arguments):
-    - haplotypes_csv (--out-haplotypes): Output CSV path for unique haplotypes metadata.
-    - genotypes_csv (--out-genotypes): Output CSV path for sample genotype assignments.
+    - **haplotypes_csv** (`--out-haplotypes`): Output CSV path for unique haplotypes metadata.
+    - **genotypes_csv** (`--out-genotypes`): Output CSV path for sample genotype assignments.
 
 Optional Parameters:
-    - threads (--threads): Number of CPU cores to utilize for multiprocessing (default: 1).
+    - **threads** (`--threads`): Number of CPU cores to utilize for multiprocessing (default: 1).
 """
 
 import argparse
@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
     Parses command-line arguments for the haplotype extraction workflow.
 
     Returns:
-        argparse.Namespace: An object containing the parsed execution parameters.
+        args (:obj:`argparse.Namespace`): An object containing the parsed execution parameters.
     """
     parser = argparse.ArgumentParser(description="Extracts haplotypes and genotypes from a phased VCF.")
     parser.add_argument("--vcf", required=True, help="Path to the phased VCF file.")
@@ -72,15 +72,15 @@ def process_transcript(
     aggregating unique allelic combinations into distinct haplotypes.
 
     Args:
-        transcript_id (str): The Ensembl transcript identifier to process.
-        annotations_df (pd.DataFrame): DataFrame containing exonic coordinates.
-        vcf_path (str or pathlib.Path): File system path to the indexed phased VCF.
-        samples (List[str]): List of sample identifiers present in the VCF header.
+        transcript_id (:obj:`str`): The Ensembl transcript identifier to process.
+        annotations_df (:obj:`pandas.DataFrame`): DataFrame containing exonic coordinates.
+        vcf_path (:obj:`str` or :obj:`pathlib.Path`): File system path to the indexed phased VCF.
+        samples (:obj:`list` of :obj:`str`): List of sample identifiers present in the VCF header.
 
     Returns:
-        Optional[Tuple[List[Dict[str, Any]], Dict[str, str]]]: A tuple containing the
-            haplotype metadata records and the transcript-specific genotype matrix.
-            Returns None if the transcript lacks exonic annotations.
+        transcript_result (:obj:`tuple` of (:obj:`list` of :obj:`dict`, :obj:`dict`) or :obj:`None`): A tuple
+            containing the haplotype metadata records and the transcript-specific genotype matrix. Returns `None`
+            if the transcript lacks exonic annotations.
     """
     vcf_path = Path(vcf_path)
 
@@ -212,14 +212,11 @@ def run_pipeline(
     strand orientation, and exports the final standardized datasets to CSV files.
 
     Args:
-        vcf_path (str or pathlib.Path): Path to the phased, bgzipped, and indexed VCF file.
-        annotations_path (str or pathlib.Path): Path to the CSV file containing exon-level annotations.
-        out_haplotypes (str or pathlib.Path): Output file path for the generated haplotypes metadata CSV.
-        out_genotypes (str or pathlib.Path): Output file path for the sample genotype matrix CSV.
-        threads (int): Number of parallel CPU worker processes to spawn.
-
-    Returns:
-        None
+        vcf_path (:obj:`str` or :obj:`pathlib.Path`): Path to the phased, bgzipped, and indexed VCF file.
+        annotations_path (:obj:`str` or :obj:`pathlib.Path`): Path to the CSV file containing exon-level annotations.
+        out_haplotypes (:obj:`str` or :obj:`pathlib.Path`): Output file path for the generated haplotypes metadata CSV.
+        out_genotypes (:obj:`str` or :obj:`pathlib.Path`): Output file path for the sample genotype matrix CSV.
+        threads (:obj:`int`): Number of parallel CPU worker processes to spawn.
     """
     vcf_path = Path(vcf_path)
     annotations_path = Path(annotations_path)
