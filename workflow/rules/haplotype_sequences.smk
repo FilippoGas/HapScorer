@@ -75,15 +75,47 @@ rule generate_mutated_sequences:
         "../scripts/generate_mutated_sequences.py"
 
 
-# rule generate_sequences:
+rule translate_sequences:
+    """
+    Translates the mutated coding nucleotide sequences (CDS) into amino acid sequences.
+
+    Processes the intermediate '{chr}_haplotypes_nn.csv' file to translate the 'nn_sequence'
+    into 'aa_sequence', identifying any premature stop codons or frameshifts.
+
+    :input mutated_cds_csv: Intermediate dataset containing mutated nucleotide sequences.
+    :output mutated_aa_csv: Dataset containing translated amino acid sequences.
+    """
+    input:
+        mutated_cds_csv="results/haplotype_sequences/haplotypes/{chr}_haplotypes_nn.csv",
+    output:
+        mutated_aa_csv=temp(
+            "results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv"
+        ),
+    log:
+        "logs/haplotype_sequences/translate_sequences/{chr}.log",
+    benchmark:
+        "benchmarks/haplotype_sequences/translate_sequences/{chr}.tsv"
+    conda:
+        "../envs/haplotype_sequences.yaml"
+    threads: 2
+    resources:
+        mem_mb=4000,
+        runtime=30,
+    message:
+        "Translating mutated nucleotide sequences to amino acids for chromosome {wildcards.chr}"
+    script:
+        "../scripts/translate_sequences.py"
+
+
+# rule translate_sequences:
 #     input:
-#         wt_cds="resources/reference_data/wt_cds.csv",
-#         annotations="resources/reference_data/protein_coding_transcripts.csv",
-#         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes.csv",
+#         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_nn.csv",
 #     output:
-#         temp("results/haplotype_sequences/haplotypes/{chr}_haplotypes_nn.csv"),
+#         mutated_aa_csv=temp(
+#             "results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv"
+#         ),
 #     conda:
 #         "../envs/Renv.yaml"
-#     threads: 4
+#     threads: 2
 #     script:
-#         "../scripts/mutated_sequences.R"
+#         "../scripts/translate_sequences.R"

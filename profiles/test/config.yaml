@@ -21,16 +21,18 @@ set-threads:
   merge_and_sort_samples: 4
 
   # workflow/rules/phasing.smk
-  split_vcf_by_chr: 4
+  split_vcf_by_chr: 2
   unpack_genetic_map: 1
-  phase_common_variants: 4
+  phase_common_variants: 3
 
   # workflow/rules/reference_data.smk
   download_ensembl_bulk_data: 1
   parse_ensembl_bulk_sequences: 1
 
   # workflow/rules/haplotype_sequences.smk
-  extract_haplotypes_and_genotypes: 4
+  extract_haplotypes_and_genotypes: 2
+  generate_mutated_sequences: 2
+  translate_sequences: 2
 
 # Memory and execution bounds per rule
 set-resources:
@@ -63,5 +65,11 @@ set-resources:
 
   # workflow/rules/haplotype_sequences.smk
   extract_haplotypes_and_genotypes:
+    mem_mb: 7500
+    runtime: 30
+  generate_mutated_sequences:
+    mem_mb: 7500
+    runtime: 30
+  translate_sequences:
     mem_mb: 7500
     runtime: 30

@@ -69,19 +69,12 @@ onerror:
 rule all:
     default_target: True
     input:
-        "resources/reference_data/protein_coding_transcripts.csv",
-        "resources/reference_data/wt_aa.csv",
-        "resources/reference_data/wt_cds.csv",
-        expand(
-            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes.csv",
-            i=[3, 6, 8, 21, 22],
-        ),
-        expand(
-            "results/haplotype_sequences/genotypes/chr{i}_genotypes.csv",
-            i=[3, 6, 8, 21, 22],
-        ),
         expand(
             "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_nn.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_aa.csv",
             i=[3, 6, 8, 21, 22],
         ),
 
@@ -106,5 +99,9 @@ rule all_test:
         ),
         expand(
             "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_nn.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_aa.csv",
             i=[3, 6, 8, 21, 22],
         ),
