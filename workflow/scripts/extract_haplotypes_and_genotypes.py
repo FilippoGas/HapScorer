@@ -299,3 +299,6 @@ if __name__ == "__main__":
         out_genotypes=out_genotypes,
         threads=threads,
     )
+
+    if is_snakemake:
+        log_f.close()

@@ -287,3 +287,6 @@ if __name__ == "__main__":
         out_cdna=out_cdna,
         out_uniprot=out_uniprot,
     )
+
+    if is_snakemake:
+        log_f.close()

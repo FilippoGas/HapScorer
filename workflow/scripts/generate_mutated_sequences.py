@@ -555,3 +555,6 @@ if __name__ == "__main__":
         out_mutated_path=out_mutated_path,
         threads=threads,
     )
+
+    if is_snakemake:
+        log_f.close()

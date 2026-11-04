@@ -176,3 +176,6 @@ if __name__ == "__main__":
         out_aa_path=out_aa_path,
         threads=threads,
     )
+
+    if is_snakemake:
+        log_f.close()

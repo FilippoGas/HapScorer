@@ -552,3 +552,6 @@ if __name__ == "__main__":
         p_filters=p_filters,
         p_stop_codons=p_stop_codons,
     )
+
+    if is_snakemake:
+        log_f.close()
