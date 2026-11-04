@@ -3,25 +3,27 @@
 """
 Securely fetches and verifies bulk reference datasets from the Ensembl server.
 
-Designed for execution within a Snakemake workflow, this script automates the
-download of genomic annotations and FASTA files. It implements a rigorous two-stage
-data integrity pipeline:
-1. Network transfer validation against upstream Ensembl CHECKSUMS utilizing the
-   legacy UNIX `sum` algorithm.
-2. Cryptographic SHA-256 digest generation for local storage provenance, mitigating
-   downstream risks associated with bit rot or unintended modifications.
+Automates the download of genomic annotations and FASTA files. It implements a rigorous
+two-stage data integrity pipeline:
+1. Network transfer validation against upstream Ensembl CHECKSUMS utilizing the legacy UNIX `sum` algorithm.
+2. Cryptographic SHA-256 digest generation for local storage provenance.
 
-Expected Snakemake Parameters:
-    - release (str or int): The Ensembl release version (e.g., 113).
+Supports dual execution modes:
+1. Native Snakemake workflow integration via the `script:` directive.
+2. Standalone Command Line Interface (CLI) execution via `argparse` for manual debugging.
 
-Expected Snakemake Outputs:
-    - gtf (str or Path): Output path for the GTF annotation file.
-    - cds (str or Path): Output path for the CDS FASTA file.
-    - pep (str or Path): Output path for the peptide FASTA file.
-    - cdna (str or Path): Output path for the cDNA FASTA file.
-    - uniprot (str or Path): Output path for the UniProt TSV mapping file.
+Expected Snakemake Outputs (or CLI Arguments):
+    * **gtf** (`--out-gtf`): Output path for the GTF annotation file.
+    * **cds** (`--out-cds`): Output path for the CDS FASTA file.
+    * **pep** (`--out-pep`): Output path for the peptide FASTA file.
+    * **cdna** (`--out-cdna`): Output path for the cDNA FASTA file.
+    * **uniprot** (`--out-uniprot`): Output path for the UniProt TSV mapping file.
+
+Optional Parameters:
+    * **release** (`--release`): The Ensembl release version (default: 113).
 """
 
+import argparse
 import hashlib
 import subprocess
 import sys
@@ -45,6 +47,23 @@ sys.stderr = log_file
 # =============================================================================
 
 
+def parse_args() -> argparse.Namespace:
+    """
+    Parses command-line arguments for the Ensembl bulk download workflow.
+
+    Returns:
+        args (:obj:`argparse.Namespace`): An object containing the parsed execution parameters.
+    """
+    parser = argparse.ArgumentParser(description="Securely fetches and verifies bulk datasets from Ensembl.")
+    parser.add_argument("--release", default=113, help="Ensembl release version (default: 113).")
+    parser.add_argument("--out-gtf", required=True, help="Output path for GTF annotation file.")
+    parser.add_argument("--out-cds", required=True, help="Output path for CDS FASTA file.")
+    parser.add_argument("--out-pep", required=True, help="Output path for peptide FASTA file.")
+    parser.add_argument("--out-cdna", required=True, help="Output path for cDNA FASTA file.")
+    parser.add_argument("--out-uniprot", required=True, help="Output path for UniProt TSV mapping file.")
+    return parser.parse_args()
+
+
 def generate_sha256(file_path: Union[str, Path]) -> str:
     """
     Computes the SHA-256 cryptographic hash of a given file.
@@ -54,10 +73,10 @@ def generate_sha256(file_path: Union[str, Path]) -> str:
     without causing memory overflow.
 
     Args:
-        file_path (str or pathlib.Path): The local file system path to the target file.
+        file_path (:obj:`str` or :obj:`pathlib.Path`): The local file system path to the target file.
 
     Returns:
-        str: The resulting SHA-256 hash formatted as a hexadecimal string.
+        hash_digest (:obj:`str`): The resulting SHA-256 hash formatted as a hexadecimal string.
     """
     sha256_hash = hashlib.sha256()
     with open(file_path, "rb") as f:
@@ -76,11 +95,11 @@ def make_progress_hook(file_name: str) -> Callable[[int, int, int], None]:
     in 10 MB increments.
 
     Args:
-        file_name (str): The name of the file being downloaded, used for logging context.
+        file_name (:obj:`str`): The name of the file being downloaded, used for logging context.
 
     Returns:
-        Callable[[int, int, int], None]: A function matching the signature required by
-        `urllib.request.urlretrieve`'s `reporthook` parameter.
+        progress_hook (:obj:`typing.Callable`[[int, int, int], None]): A function matching the signature
+            required by `urllib.request.urlretrieve`'s `reporthook` parameter.
     """
     last_reported_mb = -1
 
@@ -115,8 +134,8 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
     triggers an automatic cleanup of the corrupted data.
 
     Args:
-        url (str): The direct FTP/HTTP URL of the Ensembl dataset.
-        output_path (str or pathlib.Path): The local file system path where the
+        url (:obj:`str`): The direct FTP/HTTP URL of the Ensembl dataset.
+        output_path (:obj:`str` or :obj:`pathlib.Path`): The local file system path where the
             dataset should be stored.
 
     Raises:
@@ -197,21 +216,36 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
 # =============================================================================
 
 
-def main():
+def run_pipeline(
+    release: Union[str, int],
+    out_gtf: Union[str, Path],
+    out_cds: Union[str, Path],
+    out_pep: Union[str, Path],
+    out_cdna: Union[str, Path],
+    out_uniprot: Union[str, Path],
+) -> None:
     """
-    Primary execution function for Snakemake integration.
-    """
-    # Extract execution parameters dynamically from the Snakemake object
-    release = snakemake.params.release
+    Executes the full dataset acquisition and verification pipeline.
 
+    Constructs canonical Ensembl FTP URLs based on the release version and orchestrates
+    download, transfer verification, and SHA-256 checksum generation for each target dataset.
+
+    Args:
+        release (:obj:`str` or :obj:`int`): The Ensembl release version number.
+        out_gtf (:obj:`str` or :obj:`pathlib.Path`): Output path for the GTF annotation file.
+        out_cds (:obj:`str` or :obj:`pathlib.Path`): Output path for the CDS FASTA file.
+        out_pep (:obj:`str` or :obj:`pathlib.Path`): Output path for the peptide FASTA file.
+        out_cdna (:obj:`str` or :obj:`pathlib.Path`): Output path for the cDNA FASTA file.
+        out_uniprot (:obj:`str` or :obj:`pathlib.Path`): Output path for the UniProt TSV file.
+    """
     # Map output variables to their exact Ensembl URL pathways
     # These URLs reflect the canonical directory structure of the Ensembl FTP service
     datasets = {
-        snakemake.output.gtf: f"https://ftp.ensembl.org/pub/release-{release}/gtf/homo_sapiens/Homo_sapiens.GRCh38.{release}.gtf.gz",
-        snakemake.output.cds: f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz",
-        snakemake.output.pep: f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz",
-        snakemake.output.cdna: f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
-        snakemake.output.uniprot: f"https://ftp.ensembl.org/pub/release-{release}/tsv/homo_sapiens/Homo_sapiens.GRCh38.{release}.uniprot.tsv.gz",
+        out_gtf: f"https://ftp.ensembl.org/pub/release-{release}/gtf/homo_sapiens/Homo_sapiens.GRCh38.{release}.gtf.gz",
+        out_cds: f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz",
+        out_pep: f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz",
+        out_cdna: f"https://ftp.ensembl.org/pub/release-{release}/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
+        out_uniprot: f"https://ftp.ensembl.org/pub/release-{release}/tsv/homo_sapiens/Homo_sapiens.GRCh38.{release}.uniprot.tsv.gz",
     }
 
     print("===============================================================", flush=True)
@@ -227,4 +261,29 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    is_snakemake = False
+
+    if "snakemake" in globals():
+        is_snakemake = True
+        if hasattr(snakemake, "log") and snakemake.log:
+            log_f = open(snakemake.log[0], "w", buffering=1)
+            sys.stdout = log_f
+            sys.stderr = log_f
+    else:
+        args = parse_args()
+
+    release = snakemake.params.get("release", 113) if is_snakemake else args.release
+    out_gtf = snakemake.output["gtf"] if is_snakemake else args.out_gtf
+    out_cds = snakemake.output["cds"] if is_snakemake else args.out_cds
+    out_pep = snakemake.output["pep"] if is_snakemake else args.out_pep
+    out_cdna = snakemake.output["cdna"] if is_snakemake else args.out_cdna
+    out_uniprot = snakemake.output["uniprot"] if is_snakemake else args.out_uniprot
+
+    run_pipeline(
+        release=release,
+        out_gtf=out_gtf,
+        out_cds=out_cds,
+        out_pep=out_pep,
+        out_cdna=out_cdna,
+        out_uniprot=out_uniprot,
+    )
