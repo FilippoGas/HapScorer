@@ -101,6 +101,8 @@ rule translate_sequences:
     resources:
         mem_mb=4000,
         runtime=30,
+    params:
+        ncbi_genetic_code=NCBI_GENETIC_CODE,
     message:
         "Translating mutated nucleotide sequences to amino acids for chromosome {wildcards.chr}"
     script:
@@ -139,15 +141,3 @@ rule compute_frequencies:
         "Computing populational haplotype frequencies for chromosome {wildcards.chr}"
     script:
         "../scripts/compute_frequencies.py"
-
-
-# rule compute_frequencies:
-#     input:
-#         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv",
-#         genotypes="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
-#     output:
-#         haplotypes_final="results/haplotype_sequences/haplotypes/{chr}_haplotypes_final.csv",
-#     conda:
-#         "../envs/Renv.yaml"
-#     script:
-#         "../scripts/compute_frequencies.R"

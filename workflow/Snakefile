@@ -37,6 +37,8 @@ validate(samples_df, schema="schemas/samples.schema.yaml")
 samples_df["var_type"] = samples_df["var_type"].str.lower()
 SAMPLES = samples_df.set_index(["sample", "var_type"], drop=False)
 
+NCBI_GENETIC_CODE = config.get("ncbi_genetic_code", 1)
+
 # Autosomal chromosomes (1–22)
 CHROM = [f"chr{i}" for i in range(1, 23)]
 CHROM_NUMBERS = [str(i) for i in range(1, 23)]

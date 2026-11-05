@@ -10,6 +10,12 @@ properties:
     type: string
     description: "Path to the TSV file containing the sample table."
 
+  ncbi_genetic_code:
+    type: integer
+    minimum: 1
+    default: 1
+    description: "NCBI Genetic Code Table ID used for sequence translation and stop codon derivation across the pipeline."
+
   resources:
     type: object
     description: "Paths for external static reference resources and genetic maps."
@@ -74,11 +80,10 @@ properties:
               chromosome_regex:
                 type: ["string", "null"]
                 description: "Regular expression pattern for matching valid chromosome names."
-          stop_codons:
-            type: ["array", "null"]
-            items:
-              type: string
-            description: "List of DNA stop codons used to identify translation termination sites."
+
+  # haplotype_sequences:
+  #   type: object
+  #   description: "Processing parameters for Haplotype sequences."
 
 # Top-level mandatory fields in config.yaml
 required:
@@ -86,3 +91,4 @@ required:
   # - variant_processing
   # - phasing
   # - reference_data
+  # - haplotype_sequences

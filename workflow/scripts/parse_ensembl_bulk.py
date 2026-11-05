@@ -30,7 +30,7 @@ Optional Parameters:
     - **allowed_tsl** (`--allowed-tsl`): List of allowed TSL values (e.g. 1 2).
     - **excluded_chromosomes** (`--excluded-chromosomes`): List of chromosomes to exclude.
     - **chromosome_regex** (`--chromosome-regex`): Regex pattern to filter chromosome names.
-    - **stop_codons** (`--stop-codons`): List of stop codon triplets (default: TAA TAG TGA).
+    - **ncbi_genetic_code** (`--ncbi-genetic-code`): NCBI Genetic Code Table ID used to derive translation termination codons (default: 1).
 """
 
 import argparse
@@ -42,6 +42,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union
 
 import pandas as pd
 from Bio import SeqIO
+from Bio.Data import CodonTable
 
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
@@ -79,7 +80,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--allowed-tsl", nargs="*", help="Allowed TSL values (e.g., 1 2).")
     parser.add_argument("--excluded-chromosomes", nargs="*", help="Chromosomes to exclude.")
     parser.add_argument("--chromosome-regex", default="", help="Regex pattern to filter chromosomes.")
-    parser.add_argument("--stop-codons", nargs="*", default=["TAA", "TAG", "TGA"], help="Stop codon triplets.")
+    parser.add_argument("--ncbi-genetic-code", type=int, default=1, help="NCBI Genetic Code Table ID (default: 1).")
     return parser.parse_args()
 
 
@@ -213,7 +214,7 @@ def run_pipeline(
     output_annotations: Union[str, Path],
     p_biotype: str = "protein_coding",
     p_filters: Optional[Dict[str, Any]] = None,
-    p_stop_codons: Optional[List[str]] = None,
+    p_ncbi_genetic_code: int = 1,
 ) -> None:
     """
     Executes the complete Ensembl GTF/FASTA parsing and annotation pipeline.
@@ -232,12 +233,10 @@ def run_pipeline(
         output_annotations (:obj:`str` or :obj:`pathlib.Path`): Output CSV path for BioMart-formatted annotations.
         p_biotype (:obj:`str`): Target transcript biotype filter.
         p_filters (:obj:`dict`, optional): Dictionary containing transcript filtering rules.
-        p_stop_codons (:obj:`list` of :obj:`str`, optional): List of stop codon triplets.
+        p_ncbi_genetic_code (:obj:`int`, optional): NCBI Genetic Code Table ID used to derive stop codons (default: 1).
     """
-    if p_stop_codons is None:
-        p_stop_codons = ["TAA", "TAG", "TGA"]
-
-    stop_codons_set = set(p_stop_codons)
+    # Derive stop codons dynamically from NCBI Genetic Code Table
+    stop_codons_set = set(CodonTable.unambiguous_dna_by_id[p_ncbi_genetic_code].stop_codons)
 
     print("Parsing local Ensembl GTF and FASTA files...\n")
 
@@ -537,7 +536,7 @@ if __name__ == "__main__":
             "chromosome_regex": args.chromosome_regex,
         }
     )
-    p_stop_codons = snakemake.params.get("stop_codons", ["TAA", "TAG", "TGA"]) if is_snakemake else args.stop_codons
+    p_ncbi_genetic_code = snakemake.params.get("ncbi_genetic_code", 1) if is_snakemake else args.ncbi_genetic_code
 
     run_pipeline(
         input_gtf=input_gtf,
@@ -550,7 +549,7 @@ if __name__ == "__main__":
         output_annotations=output_annotations,
         p_biotype=p_biotype,
         p_filters=p_filters,
-        p_stop_codons=p_stop_codons,
+        p_ncbi_genetic_code=p_ncbi_genetic_code,
     )
 
     if is_snakemake:

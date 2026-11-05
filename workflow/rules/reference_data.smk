@@ -19,7 +19,6 @@ FILTERS = dl_seq_cfg.setdefault(
         "chromosome_regex": r"^\d{1,2}$",
     },
 )
-STOP_CODONS = dl_seq_cfg.setdefault("stop_codons", ["TAA", "TAG", "TGA"])
 
 
 rule download_ensembl_bulk_data:
@@ -105,7 +104,7 @@ rule parse_ensembl_bulk_sequences:
     params:
         biotype=TRANSCRIPT_BIOTYPE,
         filters=FILTERS,
-        stop_codons=STOP_CODONS,
+        ncbi_genetic_code=NCBI_GENETIC_CODE,
     message:
         "Extracting Ensembl wild-type sequences and annotations via pre-downloaded resources"
     script:
