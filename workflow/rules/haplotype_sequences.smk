@@ -19,8 +19,12 @@ rule extract_haplotypes_and_genotypes:
         phased_vcf="results/phasing/phased/{chr}.phased.vcf.gz",
         annotations="resources/reference_data/protein_coding_transcripts.csv",
     output:
-        haplotypes_csv="results/haplotype_sequences/haplotypes/{chr}_haplotypes.csv",
-        genotypes_csv="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
+        haplotypes_csv=temp(
+            "results/haplotype_sequences/haplotypes/{chr}_haplotypes.csv"
+        ),
+        genotypes_csv=protected(
+            "results/haplotype_sequences/genotypes/{chr}_genotypes.csv"
+        ),
     log:
         "logs/haplotype_sequences/extract_haplotypes_and_genotypes/{chr}.log",
     benchmark:
@@ -126,7 +130,9 @@ rule compute_frequencies:
         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv",
         genotypes="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
     output:
-        haplotypes_annotated="results/haplotype_sequences/haplotypes/{chr}_haplotypes_annotated.csv",
+        haplotypes_annotated=protected(
+            "results/haplotype_sequences/haplotypes/{chr}_haplotypes_annotated.csv"
+        ),
     log:
         "logs/haplotype_sequences/compute_frequencies/{chr}.log",
     benchmark:
