@@ -119,14 +119,14 @@ rule compute_frequencies:
 
     :input haplotypes: The translated haplotype sequences dataset.
     :input genotypes: Matrix mapping sample genotypes to haplotype identifiers.
-    :output haplotypes_final: Finalized haplotype dataset including the 'freq_perc' metric.
+    :output haplotypes_annotated: Finalized haplotype dataset including the 'freq_perc' metric.
 
     """
     input:
         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv",
         genotypes="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
     output:
-        haplotypes_final="results/haplotype_sequences/haplotypes/{chr}_haplotypes_final.csv",
+        haplotypes_annotated="results/haplotype_sequences/haplotypes/{chr}_haplotypes_annotated.csv",
     log:
         "logs/haplotype_sequences/compute_frequencies/{chr}.log",
     benchmark:

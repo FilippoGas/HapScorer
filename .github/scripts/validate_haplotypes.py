@@ -35,7 +35,7 @@ required_haplo_cols = [
 ]
 
 for chrom in chromosomes:
-    haplo_file = base_dir / f"results/haplotype_sequences/haplotypes/{chrom}_haplotypes_final.csv"
+    haplo_file = base_dir / f"results/haplotype_sequences/haplotypes/{chrom}_haplotypes_annotated.csv"
     geno_file = base_dir / f"results/haplotype_sequences/genotypes/{chrom}_genotypes.csv"
 
     # File Integrity Verification (Existence and Non-Zero Size)

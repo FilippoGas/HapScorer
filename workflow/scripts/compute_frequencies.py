@@ -13,11 +13,11 @@ Supports dual execution modes:
 2. Standalone Command Line Interface (CLI) execution via `argparse` for manual debugging.
 
 Expected Snakemake Inputs (or CLI Arguments):
-    * **genotypes** (`--genotypes`): CSV file mapping sample genotypes to haplotype identifiers.
-    * **haplotypes_aa** (`--haplotypes-aa`): CSV file containing the translated haplotypes metadata.
+    - **genotypes** (`--genotypes`): CSV file mapping sample genotypes to haplotype identifiers.
+    - **haplotypes_aa** (`--haplotypes-aa`): CSV file containing the translated haplotypes metadata.
 
 Expected Snakemake Outputs (or CLI Arguments):
-    * **haplotypes_out** (`--out-haplotypes`): Final CSV file updated with the `freq_perc` metric.
+    - **haplotypes_annotated** (`--out-haplotypes`): Annotated CSV file updated with the `freq_perc` metric.
 """
 
 import argparse
@@ -42,7 +42,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Computes haplotype frequencies using Polars.")
     parser.add_argument("--genotypes", required=True, help="Path to input genotypes CSV.")
     parser.add_argument("--haplotypes-aa", required=True, help="Path to input haplotypes AA CSV.")
-    parser.add_argument("--out-haplotypes", required=True, help="Path to output finalized haplotypes CSV.")
+    parser.add_argument("--out-haplotypes", required=True, help="Path to output finalized annotated haplotypes CSV.")
     parser.add_argument("--threads", type=int, default=1, help="Maximum number of threads for Polars.")
     return parser.parse_args()
 
@@ -59,7 +59,7 @@ def run_pipeline(
     Args:
         genotypes_path (:obj:`str` or :obj:`pathlib.Path`): Path to the genotype matrix CSV.
         haplotypes_path (:obj:`str` or :obj:`pathlib.Path`): Path to the translated haplotypes CSV.
-        out_path (:obj:`str` or :obj:`pathlib.Path`): Destination path for the final CSV.
+        out_path (:obj:`str` or :obj:`pathlib.Path`): Destination path for the annotated haplotypes CSV file.
         threads (:obj:`int`): Number of CPU worker threads to spawn for multiprocessing execution of `polars` python module.
     """
     genotypes_path = Path(genotypes_path)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     genotypes_path = snakemake.input["genotypes"] if is_snakemake else args.genotypes
     haplotypes_path = snakemake.input["haplotypes"] if is_snakemake else args.haplotypes_aa
-    out_path = snakemake.output["haplotypes_final"] if is_snakemake else args.out_haplotypes
+    out_path = snakemake.output["haplotypes_annotated"] if is_snakemake else args.out_haplotypes
     threads = snakemake.threads if is_snakemake else args.threads
 
     run_pipeline(
