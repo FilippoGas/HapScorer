@@ -33,6 +33,7 @@ set-threads:
   extract_haplotypes_and_genotypes: 2
   generate_mutated_sequences: 2
   translate_sequences: 2
+  compute_frequencies: 4
 
 # Memory and execution bounds per rule
 set-resources:
@@ -71,5 +72,8 @@ set-resources:
     mem_mb: 7500
     runtime: 30
   translate_sequences:
+    mem_mb: 7500
+    runtime: 30
+  compute_frequencies:
     mem_mb: 7500
     runtime: 30

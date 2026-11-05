@@ -107,15 +107,47 @@ rule translate_sequences:
         "../scripts/translate_sequences.py"
 
 
-# rule translate_sequences:
+rule compute_frequencies:
+    """
+    Computes the populational frequency of each transcript haplotype.
+
+    Integrates the translated haplotype sequences with the sample genotype matrix
+    to calculate the relative frequency percentage of each unique haplotype
+    across the entire analyzed cohort.
+
+    :input haplotypes: The translated haplotype sequences dataset.
+    :input genotypes: Matrix mapping sample genotypes to haplotype identifiers.
+    :output haplotypes_final: Finalized haplotype dataset including the 'freq_perc' metric.
+
+    """
+    input:
+        haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv",
+        genotypes="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
+    output:
+        haplotypes_final="results/haplotype_sequences/haplotypes/{chr}_haplotypes_final.csv",
+    log:
+        "logs/haplotype_sequences/compute_frequencies/{chr}.log",
+    benchmark:
+        "benchmarks/haplotype_sequences/compute_frequencies/{chr}.tsv"
+    conda:
+        "../envs/haplotype_sequences.yaml"
+    threads: 4
+    resources:
+        mem_mb=4000,
+        runtime=20,
+    message:
+        "Computing populational haplotype frequencies for chromosome {wildcards.chr}"
+    script:
+        "../scripts/compute_frequencies.py"
+
+
+# rule compute_frequencies:
 #     input:
-#         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_nn.csv",
+#         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv",
+#         genotypes="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
 #     output:
-#         mutated_aa_csv=temp(
-#             "results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv"
-#         ),
+#         haplotypes_final="results/haplotype_sequences/haplotypes/{chr}_haplotypes_final.csv",
 #     conda:
 #         "../envs/Renv.yaml"
-#     threads: 2
 #     script:
-#         "../scripts/translate_sequences.R"
+#         "../scripts/compute_frequencies.R"
