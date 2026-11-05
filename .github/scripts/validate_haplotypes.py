@@ -10,11 +10,11 @@ from pathlib import Path
 
 import pandas as pd
 
-# Parse command-line argument for base directory (default: root directory)
+# Parse command-line argument for base directory (default: current directory)
 base_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("")
 chromosomes = ["chr3", "chr6", "chr8", "chr21", "chr22"]
 
-print(f"=== INITIATING HAPLOTYPE & GENOTYPE VALIDATION ON: {base_dir} ===")
+print(f"=== INITIATING HAPLOTYPE & GENOTYPE BIOLOGICAL VALIDATION ON: {base_dir} ===")
 
 required_haplo_cols = [
     "ensembl_gene_id",
@@ -26,14 +26,20 @@ required_haplo_cols = [
     "variant_types",
     "hgnc_symbol",
     "strand",
+    "start_gain",
+    "multiple_starts_in_5",
+    "stop_loss_3_translated",
+    "freq_perc",
+    "nn_sequence",
+    "aa_sequence",
 ]
 
 for chrom in chromosomes:
-    haplo_file = base_dir / f"results/haplotype_sequences/haplotypes/{chrom}_haplotypes.csv"
+    haplo_file = base_dir / f"results/haplotype_sequences/haplotypes/{chrom}_haplotypes_final.csv"
     geno_file = base_dir / f"results/haplotype_sequences/genotypes/{chrom}_genotypes.csv"
 
     # File Integrity Verification (Existence and Non-Zero Size)
-    assert haplo_file.exists(), f"Haplotype output missing for chromosome {chrom}"
+    assert haplo_file.exists(), f"Final haplotype output missing for chromosome {chrom}"
     assert geno_file.exists(), f"Genotype output missing for chromosome {chrom}"
 
     assert haplo_file.stat().st_size > 100, f"Haplotype file for {chrom} is empty or corrupted"
@@ -43,23 +49,77 @@ for chrom in chromosomes:
     df_haplo = pd.read_csv(haplo_file)
     df_geno = pd.read_csv(geno_file)
 
-    # Column Schema Validation
-    assert set(required_haplo_cols).issubset(df_haplo.columns), f"Invalid header format in {haplo_file.name}"
+    # Schema and Structure Validation
+    assert set(required_haplo_cols).issubset(df_haplo.columns), f"Missing required columns in {haplo_file.name}"
     assert "ensembl_transcript_id" in df_geno.columns, f"Missing transcript ID column in {geno_file.name}"
     assert len(df_geno.columns) > 1, f"No sample columns detected in {geno_file.name}"
-
-    # Data Volume Verification
     assert len(df_haplo) > 0, f"No haplotype records found in {haplo_file.name}"
     assert len(df_geno) > 0, f"No genotype records found in {geno_file.name}"
 
     # Biological & Haplotype Integrity Verification
-    # Wild-Type (.0) mandatory presence per transcript
+    # Wild-Type Baseline Integrity (.0)
     wt_haplos = df_haplo[df_haplo["haplotype_gene_id"].astype(str).str.endswith(".0")]
     assert len(wt_haplos["ensembl_transcript_id"].unique()) == len(
         df_haplo["ensembl_transcript_id"].unique()
     ), f"Missing wild-type (.0) entry for some transcripts in {haplo_file.name}"
 
-    # Referencing Integrity: All genotype alleles must be declared in haplotypes.csv
+    # Verify Wild-Type Biological Flags
+    for _, wt_row in wt_haplos.iterrows():
+        assert (
+            str(wt_row["variants"]).lower() == "wt"
+        ), f"WT haplotype has non-WT variant string in {wt_row['haplotype_transcript_id']}"
+        assert (
+            str(wt_row["start_gain"]).upper() == "FALSE"
+        ), f"WT haplotype marked with start_gain in {wt_row['haplotype_transcript_id']}"
+        assert (
+            str(wt_row["multiple_starts_in_5"]).upper() == "FALSE"
+        ), f"WT haplotype marked with multiple_starts_in_5 in {wt_row['haplotype_transcript_id']}"
+        assert (
+            str(wt_row["stop_loss_3_translated"]).upper() == "FALSE"
+        ), f"WT haplotype marked with stop_loss_3_translated in {wt_row['haplotype_transcript_id']}"
+
+    # Cohort Populational Frequency Sanity (Sum per transcript ~ 100%)
+    freq_sums = df_haplo.groupby("ensembl_transcript_id")["freq_perc"].sum()
+    invalid_freq_txs = freq_sums[abs(freq_sums - 100.0) > 0.1]
+    assert (
+        invalid_freq_txs.empty
+    ), f"Transcript haplotype frequency sum mismatch (expected 100%): {invalid_freq_txs.to_dict()}"
+
+    # Biological Sequence Integrity & Translation Consistency
+    wt_m_starts = 0
+    total_wt_aa = 0
+
+    for _, row in df_haplo.iterrows():
+        nn_seq = str(row["nn_sequence"]) if pd.notna(row["nn_sequence"]) else ""
+        aa_seq = str(row["aa_sequence"]) if pd.notna(row["aa_sequence"]) else ""
+        is_wt = str(row["haplotype_gene_id"]).endswith(".0")
+
+        if nn_seq:
+            # Check IUPAC DNA base compliance
+            assert set(nn_seq.upper()).issubset(
+                set("ACGTN")
+            ), f"Invalid DNA characters detected in {row['haplotype_transcript_id']}: {nn_seq}"
+
+        if aa_seq:
+            # Check nucleotide-to-amino acid length proportionality
+            assert (
+                len(nn_seq) >= len(aa_seq) * 3
+            ), f"Nucleotide sequence length is insufficient for translated amino acid sequence in {row['haplotype_transcript_id']}"
+
+            # Track Methionine initiation rate for Wild-Type (.0) haplotypes
+            if is_wt:
+                total_wt_aa += 1
+                if aa_seq.startswith("M"):
+                    wt_m_starts += 1
+
+    # Verify that > 90% of Wild-Type protein sequences initiate with Methionine (M)
+    if total_wt_aa > 0:
+        m_rate = wt_m_starts / total_wt_aa
+        assert (
+            m_rate >= 0.90
+        ), f"Wild-type translation start check failed for {chrom}: only {m_rate:.2%} of transcripts initiate with Methionine (M) (expected >= 90%)"
+
+    # Referencing Integrity: All genotype alleles must be declared in haplotypes dataset
     sample_cols = [c for c in df_geno.columns if c != "ensembl_transcript_id"]
     used_haplo_ids = set()
     for col in sample_cols:
@@ -77,6 +137,8 @@ for chrom in chromosomes:
         set(df_haplo["ensembl_transcript_id"])
     ), f"Transcript ID mismatch between genotypes and haplotypes in {chrom}"
 
-    print(f"[{chrom}] Successfully validated: {len(df_haplo)} haplotypes across {len(df_geno)} transcripts.")
+    print(
+        f"[{chrom}] Successfully validated: {len(df_haplo)} haplotypes across {len(df_geno)} transcripts (All biological invariants verified)."
+    )
 
-print("=== ALL HAPLOTYPE AND GENOTYPE VALIDATION TESTS COMPLETED SUCCESSFULLY! ===")
+print("=== ALL HAPLOTYPE AND GENOTYPE BIOLOGICAL VALIDATION TESTS COMPLETED SUCCESSFULLY! ===")
