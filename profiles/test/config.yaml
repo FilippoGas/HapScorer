@@ -42,7 +42,7 @@ set-resources:
     mem_mb: 7500
     runtime: 30
   merge_and_sort_samples:
-    mem_mb: 15000
+    mem_mb: 12000
     runtime: 30
 
   # workflow/rules/phasing.smk
@@ -53,12 +53,12 @@ set-resources:
     mem_mb: 3500
     runtime: 30
   phase_common_variants:
-    mem_mb: 15000
+    mem_mb: 12000
     runtime: 60
 
   # workflow/rules/reference_data.smk
   download_ensembl_bulk_data:
-    mem_mb: 4000
+    mem_mb: 2000
     runtime: 60
   parse_ensembl_bulk_sequences:
     mem_mb: 7500
@@ -66,13 +66,13 @@ set-resources:
 
   # workflow/rules/haplotype_sequences.smk
   extract_haplotypes_and_genotypes:
-    mem_mb: 7500
+    mem_mb: 4000
     runtime: 30
   generate_mutated_sequences:
-    mem_mb: 7500
+    mem_mb: 4000
     runtime: 30
   translate_sequences:
-    mem_mb: 7500
+    mem_mb: 4000
     runtime: 30
   compute_frequencies:
     mem_mb: 7500
