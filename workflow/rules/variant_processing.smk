@@ -17,8 +17,8 @@ rule concat_sample_variants:
         snps=lambda wildcards: SAMPLES.loc[(wildcards.sample, "snp"), "vcf_path"],
         indels=lambda wildcards: SAMPLES.loc[(wildcards.sample, "indel"), "vcf_path"],
     output:
-        vcf="results/variant_processing/concat/{sample}.vcf.gz",
-        csi="results/variant_processing/concat/{sample}.vcf.gz.csi",
+        vcf=temp("results/variant_processing/concat/{sample}.vcf.gz"),
+        csi=temp("results/variant_processing/concat/{sample}.vcf.gz.csi"),
     log:
         "logs/variant_processing/concat_sample_variants/{sample}.log",
     benchmark:

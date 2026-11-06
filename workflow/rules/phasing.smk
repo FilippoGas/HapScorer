@@ -8,9 +8,6 @@ resources_cfg.setdefault("genetic_maps_dir", "resources/maps")
 phasing_cfg = config.setdefault("phasing", {})
 phase_common_variants_cfg = phasing_cfg.setdefault("phase_common_variants", {})
 
-# Autosomal chromosomes (1–22)
-CHROMOSOMES = [f"chr{i}" for i in range(1, 23)]
-
 FILTER_MAF = phase_common_variants_cfg.setdefault("filter_maf", 0.001)
 
 MAPS_TAR = Path(config["resources"]["genetic_maps_tar"])
