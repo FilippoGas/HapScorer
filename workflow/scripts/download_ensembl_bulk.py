@@ -25,22 +25,22 @@ Optional Parameters:
 
 import argparse
 import hashlib
+import logging
 import subprocess
 import sys
 import urllib.request
 from pathlib import Path
 from typing import TYPE_CHECKING, Callable, Union
 
+from utils import init_snakemake_log, setup_logger, setup_warnings
+
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
 
     snakemake: Snakemake = Snakemake()
 
-# Redirect standard output and standard error to the Snakemake log file
-log_file = open(snakemake.log[0], "w", buffering=1)
-sys.stdout = log_file
-sys.stderr = log_file
-
+logger = setup_logger(__name__)
+setup_warnings()
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -61,6 +61,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-pep", required=True, help="Output path for peptide FASTA file.")
     parser.add_argument("--out-cdna", required=True, help="Output path for cDNA FASTA file.")
     parser.add_argument("--out-uniprot", required=True, help="Output path for UniProt TSV mapping file.")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
 
 
@@ -114,11 +115,9 @@ def make_progress_hook(file_name: str) -> Callable[[int, int, int], None]:
             if total_size > 0:
                 total_mb = total_size / (1024 * 1024)
                 percent = (downloaded_bytes / total_size) * 100
-                print(
-                    f"[{file_name}] Progress: {downloaded_mb:.1f} MB / {total_mb:.1f} MB ({percent:.1f}%)", flush=True
-                )
+                logger.info(f"[{file_name}] Progress: {downloaded_mb:.1f} MB / {total_mb:.1f} MB ({percent:.1f}%)")
             else:
-                print(f"[{file_name}] Progress: {downloaded_mb:.1f} MB downloaded", flush=True)
+                logger.info(f"[{file_name}] Progress: {downloaded_mb:.1f} MB downloaded")
 
     return progress_hook
 
@@ -150,17 +149,19 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
     checksum_url = f"{base_dir_url}/CHECKSUMS"
     tmp_checksum_file = Path(f"{output_path}.checksums.tmp")
 
-    print(f"[{file_name}] Initiating download from: {url}", flush=True)
+    logger.info(f"[{file_name}] Initiating download from: {url}")
 
     try:
         # Download the target data file
         hook = make_progress_hook(file_name)
         urllib.request.urlretrieve(url, output_file, reporthook=hook)
-        print(f"[{file_name}] Download completed.", flush=True)
+        logger.info(f"[{file_name}] Download completed.")
 
         # Download the corresponding Ensembl CHECKSUMS file
-        print(f"[{file_name}] Fetching upstream CHECKSUMS file...", flush=True)
+        logger.info(f"[{file_name}] Fetching upstream CHECKSUMS file...")
         urllib.request.urlretrieve(checksum_url, tmp_checksum_file)
+
+        logger.debug(f"[{file_name}] Parsing upstream CHECKSUMS registry entries...")
 
         # Parse the expected checksum (UNIX sum) from the downloaded text file
         expected_sum_line = ""
@@ -173,11 +174,14 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
         if not expected_sum_line:
             raise ValueError(f"Target file {file_name} not found in the upstream CHECKSUMS registry.")
 
+        logger.debug(f"[{file_name}] Matched upstream CHECKSUMS line: '{expected_sum_line}'")
+
         expected_checksum_value = expected_sum_line.split()[0]
         expected_blocks = expected_sum_line.split()[1]
 
         # Compute the local UNIX sum using the system subsystem
-        print(f"[{file_name}] Verifying network transfer integrity (Legacy 'sum')...", flush=True)
+        logger.info(f"[{file_name}] Verifying network transfer integrity (Legacy 'sum')...")
+        logger.debug(f"[{file_name}] Executing subprocess command: 'sum {output_file}'")
         sum_process = subprocess.run(["sum", str(output_file)], capture_output=True, text=True, check=True)
         actual_checksum_value, actual_blocks = sum_process.stdout.strip().split()[:2]
 
@@ -188,19 +192,19 @@ def fetch_and_verify(url: str, output_path: Union[str, Path]) -> None:
                 f"Actual:   {actual_checksum_value} (Blocks: {actual_blocks})"
             )
 
-        print(f"[{file_name}] Transfer integrity verified successfully.", flush=True)
+        logger.info(f"[{file_name}] Transfer integrity verified successfully.")
 
         # Generate a robust cryptographic hash for local provenance
-        print(f"[{file_name}] Generating secure SHA-256 digest for local data provenance...", flush=True)
+        logger.info(f"[{file_name}] Generating secure SHA-256 digest for local data provenance...")
         sha256_digest = generate_sha256(output_file)
         sha256_file = Path(f"{output_path}.sha256")
         with open(sha256_file, "w") as sha_f:
             sha_f.write(f"{sha256_digest}  {file_name}\n")
 
-        print(f"[{file_name}] SHA-256 digest generated: {sha256_digest}\n", flush=True)
+        logger.info(f"[{file_name}] SHA-256 digest generated: {sha256_digest}\n")
 
     except Exception as e:
-        print(f"[{file_name}] CRITICAL ERROR: {str(e)}", file=sys.stderr, flush=True)
+        logger.error(f"[{file_name}] CRITICAL ERROR: {str(e)}")
         # Clean up potentially corrupted files upon failure
         if output_file.exists():
             output_file.unlink()
@@ -248,16 +252,16 @@ def run_pipeline(
         out_uniprot: f"https://ftp.ensembl.org/pub/release-{release}/tsv/homo_sapiens/Homo_sapiens.GRCh38.{release}.uniprot.tsv.gz",
     }
 
-    print("===============================================================", flush=True)
-    print(f" Commencing data acquisition for Ensembl Release {release}", flush=True)
-    print("===============================================================\n", flush=True)
+    logger.info(
+        f"Commencing bulk reference data acquisition for Ensembl Release {release} across {len(datasets)} target datasets..."
+    )
 
     for output_path, origin_url in datasets.items():
         fetch_and_verify(origin_url, output_path)
 
-    print("======================================================================", flush=True)
-    print(" All requested datasets have been successfully retrieved and verified.", flush=True)
-    print("======================================================================\n", flush=True)
+    logger.info(
+        f"All requested Ensembl Release {release} datasets have been successfully retrieved, verified, and cataloged."
+    )
 
 
 if __name__ == "__main__":
@@ -265,10 +269,7 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         is_snakemake = True
-        if hasattr(snakemake, "log") and snakemake.log:
-            log_f = open(snakemake.log[0], "w", buffering=1)
-            sys.stdout = log_f
-            sys.stderr = log_f
+        init_snakemake_log(snakemake, base_dir=Path.cwd())
     else:
         args = parse_args()
 
@@ -279,6 +280,9 @@ if __name__ == "__main__":
     out_cdna = snakemake.output["cdna"] if is_snakemake else args.out_cdna
     out_uniprot = snakemake.output["uniprot"] if is_snakemake else args.out_uniprot
 
+    if not is_snakemake and args.verbose:
+        logger.setLevel(logging.DEBUG)
+
     run_pipeline(
         release=release,
         out_gtf=out_gtf,
@@ -287,6 +291,3 @@ if __name__ == "__main__":
         out_cdna=out_cdna,
         out_uniprot=out_uniprot,
     )
-
-    if is_snakemake:
-        log_f.close()

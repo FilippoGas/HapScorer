@@ -25,27 +25,26 @@ Optional Parameters:
 """
 
 import argparse
+import logging
 import multiprocessing as mp
 import sys
+import warnings
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Tuple, Union
 
 import pandas as pd
 from Bio.Data import CodonTable
 from Bio.Seq import translate
+from utils import init_snakemake_log, setup_logger, setup_warnings
 
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
 
     snakemake: Snakemake = Snakemake()
 
-# =============================================================================
-# CONSTANTS
-# =============================================================================
-
-# Canonical and non-canonical initiation codons recognized under NCBI Standard Genetic Code (Table 1)
-START_CODONS = set(CodonTable.unambiguous_dna_by_id[1].start_codons)
+logger = setup_logger(__name__)
+setup_warnings()
 
 # =============================================================================
 # HELPER FUNCTIONS & VARIANT PARSING
@@ -64,10 +63,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-aa", required=True, help="Output path for the translated amino acid sequences CSV.")
     parser.add_argument("--ncbi-genetic-code", type=int, default=1, help="NCBI Genetic Code Table ID (default: 1).")
     parser.add_argument("--threads", type=int, default=1, help="Number of CPU threads to utilize.")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
 
 
-def translate_sequence(nn_seq: Union[str, float], table: int = 1) -> str:
+def translate_sequence(row_tuple: Tuple[str, Union[str, float]], table: int = 1) -> str:
     """
     Translates a single nucleotide sequence string into an amino acid sequence.
 
@@ -78,17 +78,32 @@ def translate_sequence(nn_seq: Union[str, float], table: int = 1) -> str:
     Trims sequences to a strict multiple of 3.
 
     Args:
-        nn_seq (:obj:`str` or :obj:`float`): The input nucleotide sequence string, or float(NaN) if missing.
+        row_tuple (:obj:`tuple` of (:obj:`str`, :obj:`str` or :obj:`float`)): A tuple containing
+            the `haplotype_transcript_id` and the `nn_seq` input nucleotide sequence string, or float(NaN) if missing.
         table (:obj:`int`, optional): NCBI Genetic Code Table ID used for sequence translation (default: 1).
 
     Returns:
         translated_seq (:obj:`str`): The truncated amino acid sequence, or an empty string if the input is invalid.
     """
+    hap_id, nn_seq = row_tuple
+
     if pd.isna(nn_seq) or not isinstance(nn_seq, str) or len(nn_seq) < 3:
+        logger.debug(
+            f"Haplotype '{hap_id}': Encountered empty, non-string, or sub-triplet nucleotide sequence. "
+            "Returning empty translation."
+        )
         return ""
 
+    remainder = len(nn_seq) % 3
+    if remainder != 0:
+        warnings.warn(
+            f"Haplotype '{hap_id}': Nucleotide sequence length ({len(nn_seq)} bp) is not a strict multiple of 3. "
+            f"Trimming trailing {remainder} base(s) prior to translation.",
+            UserWarning,
+        )
+
     # Ensure the sequence length is a strict multiple of 3
-    valid_length = len(nn_seq) - (len(nn_seq) % 3)
+    valid_length = len(nn_seq) - remainder
     trimmed_seq = nn_seq[:valid_length]
 
     try:
@@ -100,10 +115,19 @@ def translate_sequence(nn_seq: Union[str, float], table: int = 1) -> str:
         # to maintain functional parity with R Biostrings default behavior
         if aa_seq and trimmed_seq[:3] in start_codons:
             aa_seq = "M" + aa_seq[1:]
+        elif aa_seq and not aa_seq.startswith("M"):
+            logger.debug(
+                f"Haplotype '{hap_id}': Translation product does not initiate with Methionine ('M') "
+                f"(first codon: '{trimmed_seq[:3]}'). Preserving native residue '{aa_seq[0]}'."
+            )
 
         return aa_seq
-    except Exception:
+    except Exception as e:
         # Fallback for unexpected nucleotide anomalies
+        warnings.warn(
+            f"Haplotype '{hap_id}': Failed to translate nucleotide sequence segment '{trimmed_seq[:15]}...': {str(e)}",
+            UserWarning,
+        )
         return ""
 
 
@@ -135,14 +159,45 @@ def run_pipeline(
     if "nn_sequence" not in df_haplo.columns:
         raise ValueError("The input CSV dataset lacks the required 'nn_sequence' column.")
 
+    logger.info(
+        f"Initiating amino acid sequence translation across {len(df_haplo)} haplotype records "
+        f"using NCBI Genetic Code Table {ncbi_genetic_code} and {threads} worker thread(s)..."
+    )
+
+    # Zip haplotype IDs with sequences to pass identifiers into worker processes
+    records = list(zip(df_haplo["haplotype_transcript_id"], df_haplo["nn_sequence"]))
     worker_func = partial(translate_sequence, table=ncbi_genetic_code)
 
     # Utilize multiprocessing pool for scalable and efficient sequence translation
-    with mp.Pool(threads) as pool:
-        aa_sequences = pool.map(worker_func, df_haplo["nn_sequence"])
+    with mp.Pool(threads, initializer=setup_warnings) as pool:
+        aa_sequences = pool.map(worker_func, records)
 
     # Append the derived translations back into the primary dataframe
     df_haplo["aa_sequence"] = aa_sequences
+
+    empty_mask = df_haplo["aa_sequence"] == ""
+    empty_translations = empty_mask.sum()
+    if empty_translations > 0:
+        empty_ids = df_haplo.loc[empty_mask, "haplotype_transcript_id"].astype(str).tolist()
+        total_empty = len(empty_ids)
+
+        # Detailed breakdown available only in DEBUG mode to prevent log pollution
+        logger.debug(
+            f"Complete list of {total_empty} haplotype record(s) resulting in empty amino acid translations: {', '.join(empty_ids)}"
+        )
+
+        # Dynamic warning formatting based on element threshold
+        if total_empty <= 10:
+            ids_fmt = ", ".join(empty_ids)
+        else:
+            ids_fmt = f"{', '.join(empty_ids[:5])}, and {total_empty - 5} more"
+
+        warnings.warn(
+            f"{total_empty} out of {len(df_haplo)} haplotype record(s) resulted in empty amino acid translations ({ids_fmt}).",
+            UserWarning,
+        )
+
+    logger.info("Completed parallel sequence translation. Formatting boolean flags and output columns...")
 
     # Uppercase Boolean formatting for parity with R
     bool_cols = ["start_gain", "multiple_starts_in_5", "stop_loss_3_translated"]
@@ -152,6 +207,11 @@ def run_pipeline(
     # Ensure the output directory hierarchy exists prior to export
     out_aa_path.parent.mkdir(parents=True, exist_ok=True)
     df_haplo.to_csv(out_aa_path, index=False, na_rep="NA")
+
+    logger.info(f"Successfully exported {len(df_haplo)} translated sequence records to '{out_aa_path}'.")
+    logger.info(
+        f"Sequence translation workflow completed successfully using NCBI Genetic Code Table {ncbi_genetic_code}."
+    )
 
 
 # =============================================================================
@@ -163,10 +223,7 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         is_snakemake = True
-        if hasattr(snakemake, "log") and snakemake.log:
-            log_f = open(snakemake.log[0], "w", buffering=1)
-            sys.stdout = log_f
-            sys.stderr = log_f
+        init_snakemake_log(snakemake, base_dir=Path.cwd())
     else:
         args = parse_args()
 
@@ -175,12 +232,12 @@ if __name__ == "__main__":
     ncbi_genetic_code = snakemake.params.get("ncbi_genetic_code", 1) if is_snakemake else args.ncbi_genetic_code
     threads = snakemake.threads if is_snakemake else args.threads
 
+    if not is_snakemake and args.verbose:
+        logger.setLevel(logging.DEBUG)
+
     run_pipeline(
         mutated_cds_path=mutated_cds_path,
         out_aa_path=out_aa_path,
         ncbi_genetic_code=ncbi_genetic_code,
         threads=threads,
     )
-
-    if is_snakemake:
-        log_f.close()

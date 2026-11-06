@@ -21,15 +21,22 @@ Expected Snakemake Outputs (or CLI Arguments):
 """
 
 import argparse
+import logging
 import os
 import sys
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
+
+from utils import init_snakemake_log, setup_logger, setup_warnings
 
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
 
     snakemake: Snakemake = Snakemake()
+
+logger = setup_logger(__name__)
+setup_warnings()
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,6 +51,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--haplotypes-aa", required=True, help="Path to input haplotypes AA CSV.")
     parser.add_argument("--out-haplotypes", required=True, help="Path to output finalized annotated haplotypes CSV.")
     parser.add_argument("--threads", type=int, default=1, help="Maximum number of threads for Polars.")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
 
 
@@ -72,6 +80,7 @@ def run_pipeline(
 
     lf_geno = pl.scan_csv(genotypes_path)
     lf_haplo = pl.scan_csv(haplotypes_path)
+    logger.debug(f"Scanning input LazyFrames: '{genotypes_path}' and '{haplotypes_path}'")
 
     # Extract sample columns (all except the transcript identifier)
     sample_cols = [c for c in lf_geno.collect_schema().names() if c != "ensembl_transcript_id"]
@@ -80,6 +89,11 @@ def run_pipeline(
 
     if total_alleles == 0:
         raise ValueError("No samples found in the genotypes matrix.")
+
+    logger.info(
+        f"Initiating haplotype frequency computation across {n_samples} samples ({total_alleles} total alleles) "
+        f"using Polars with {threads} worker thread(s)..."
+    )
 
     # Unpivot the genotype matrix to a long format
     melted = lf_geno.unpivot(
@@ -117,6 +131,32 @@ def run_pipeline(
     # Materialize the data by executing the entire computation plan
     df_final = lf_haplo.collect()
 
+    zero_freq_df = df_final.filter(pl.col("freq_perc") == 0.0)
+    zero_freq_count = len(zero_freq_df)
+    if zero_freq_count > 0:
+        zero_ids = zero_freq_df["haplotype_transcript_id"].to_list()
+
+        # Detailed breakdown available only in DEBUG mode to prevent log pollution
+        logger.debug(
+            f"Complete list of {zero_freq_count} haplotype record(s) with 0.0% populational frequency: {', '.join(zero_ids)}"
+        )
+
+        # Dynamic warning formatting based on element threshold
+        if zero_freq_count <= 10:
+            ids_fmt = ", ".join(zero_ids)
+        else:
+            ids_fmt = f"{', '.join(zero_ids[:5])}, and {zero_freq_count - 5} more"
+
+        warnings.warn(
+            f"Detected {zero_freq_count} haplotype record(s) with 0.0% populational frequency "
+            f"absent from sample genotype calls in '{genotypes_path}' ({ids_fmt}).",
+            UserWarning,
+        )
+
+    logger.info(
+        f"Materialized Polars computation graph. Computed populational frequencies for {len(df_final)} unique transcript haplotype records."
+    )
+
     # Relocate 'freq_perc' before 'hgnc_symbol' to match R output formatting
     cols = df_final.columns
     cols.remove("freq_perc")
@@ -136,16 +176,16 @@ def run_pipeline(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     df_final.write_csv(out_path, null_value="NA")
 
+    logger.info(f"Successfully exported annotated haplotype dataset with frequency metrics to '{out_path}'.")
+    logger.info("Populational haplotype frequency computation workflow completed successfully.")
+
 
 if __name__ == "__main__":
     is_snakemake = False
 
     if "snakemake" in globals():
         is_snakemake = True
-        if hasattr(snakemake, "log") and snakemake.log:
-            log_f = open(snakemake.log[0], "w", buffering=1)
-            sys.stdout = log_f
-            sys.stderr = log_f
+        init_snakemake_log(snakemake, base_dir=Path.cwd())
     else:
         args = parse_args()
 
@@ -154,12 +194,12 @@ if __name__ == "__main__":
     out_path = snakemake.output["haplotypes_annotated"] if is_snakemake else args.out_haplotypes
     threads = snakemake.threads if is_snakemake else args.threads
 
+    if not is_snakemake and args.verbose:
+        logger.setLevel(logging.DEBUG)
+
     run_pipeline(
         genotypes_path=genotypes_path,
         haplotypes_path=haplotypes_path,
         out_path=out_path,
         threads=threads,
     )
-
-    if is_snakemake:
-        log_f.close()

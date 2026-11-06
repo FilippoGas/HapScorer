@@ -35,24 +35,25 @@ Optional Parameters:
 
 import argparse
 import gzip
+import logging
 import re
 import sys
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Union
 
 import pandas as pd
 from Bio import SeqIO
 from Bio.Data import CodonTable
+from utils import init_snakemake_log, setup_logger, setup_warnings
 
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
 
     snakemake: Snakemake = Snakemake()
 
-# Redirect standard output and standard error to the Snakemake log file
-log_file = open(snakemake.log[0], "w", buffering=1)
-sys.stdout = log_file
-sys.stderr = log_file
+logger = setup_logger(__name__)
+setup_warnings()
 
 
 # =============================================================================
@@ -81,6 +82,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--excluded-chromosomes", nargs="*", help="Chromosomes to exclude.")
     parser.add_argument("--chromosome-regex", default="", help="Regex pattern to filter chromosomes.")
     parser.add_argument("--ncbi-genetic-code", type=int, default=1, help="NCBI Genetic Code Table ID (default: 1).")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
 
 
@@ -189,13 +191,39 @@ def map_utr(
     return contained[["ensembl_transcript_id", "exon_chrom_start", "exon_chrom_end", start_col, end_col]]
 
 
-# =============================================================================
-# CONSTANTS
-# =============================================================================
+def get_two_base_map(table_id: int = 1) -> Dict[str, str]:
+    """
+    Derives 2-base partial codon mappings (4-fold degenerate site prefixes) dynamically.
 
+    Evaluates the specified NCBI Genetic Code Table to identify all 2-nucleotide
+    prefix combinations where every possible 3rd nucleotide (A, C, G, T) translates to
+    the exact same amino acid residue. This enables unambiguous translation of partial
+    terminal codons in incomplete or frame-trimmed coding DNA sequences (CDS).
 
-# Map of unique 2-base partial codons
-TWO_BASE_MAP = {"CC": "P", "AC": "T", "GT": "V", "GC": "A", "GG": "G", "CT": "L", "TC": "S", "CG": "R"}
+    Args:
+        table_id (:obj:`int`, optional): NCBI Genetic Code Table ID used for codon
+            translation mapping (default: 1).
+
+    Returns:
+        two_base_map (:obj:`dict` of :obj:`str`): A dictionary mapping 2-base nucleotide
+            prefix strings (e.g., 'CC') to their corresponding single-letter amino acid
+            symbol (e.g., 'P').
+    """
+    table = CodonTable.unambiguous_dna_by_id[table_id]
+    forward_table = table.forward_table
+    bases = ["A", "C", "G", "T"]
+    two_base_map = {}
+
+    for b1 in bases:
+        for b2 in bases:
+            prefix = b1 + b2
+            # Extract amino acid residues for all 4 possible 3rd positions
+            residues = {forward_table.get(prefix + b3) for b3 in bases}
+            # If all 4 codons map to the exact same valid residue (excluding stop codons)
+            if len(residues) == 1 and None not in residues:
+                two_base_map[prefix] = residues.pop()
+
+    return two_base_map
 
 
 # =============================================================================
@@ -238,15 +266,17 @@ def run_pipeline(
     # Derive stop codons dynamically from NCBI Genetic Code Table
     stop_codons_set = set(CodonTable.unambiguous_dna_by_id[p_ncbi_genetic_code].stop_codons)
 
-    print("Parsing local Ensembl GTF and FASTA files...\n")
+    logger.info(
+        f"Initiating bulk parsing of Ensembl reference data using NCBI Genetic Code Table {p_ncbi_genetic_code}..."
+    )
 
     # Load GTF Annotations
-    print("Loading GTF annotations...")
+    logger.info(f"Loading GTF annotation dataset from '{input_gtf}'...")
     gtf_cols = ["seqname", "source", "feature", "start", "end", "score", "strand", "frame", "attribute"]
     # Compression is inferred automatically if the file ends in .gz
     gtf_data = pd.read_csv(input_gtf, sep="\t", comment="#", names=gtf_cols, dtype={"seqname": str})
 
-    print("Extracting transcript features...")
+    logger.info(f"Extracting transcript features filtered by biotype '{p_biotype}'...")
     # Filter for transcripts
     tx_gtf = gtf_data[gtf_data["feature"] == "transcript"].copy()
 
@@ -294,7 +324,7 @@ def run_pipeline(
         allowed_tsl = p_filters.get("allowed_tsl")
         if allowed_tsl:
             allowed_tsl_vec = [str(t).replace("tsl", "") for t in allowed_tsl]
-            print(f"Filtering transcripts by allowed TSL: {', '.join(allowed_tsl_vec)}")
+            logger.info(f"Filtering transcripts by allowed TSL: {', '.join(allowed_tsl_vec)}")
             protein_coding_transcripts = protein_coding_transcripts[
                 protein_coding_transcripts["transcript_tsl"].isin(allowed_tsl_vec)
             ]
@@ -302,7 +332,7 @@ def run_pipeline(
         # Exclude chromosomes
         excluded_chroms = p_filters.get("excluded_chromosomes")
         if excluded_chroms:
-            print(f"Excluding chromosomes: {', '.join(excluded_chroms)}")
+            logger.info(f"Excluding chromosomes: {', '.join(excluded_chroms)}")
             protein_coding_transcripts = protein_coding_transcripts[
                 ~protein_coding_transcripts["chromosome_name"].isin(excluded_chroms)
             ]
@@ -310,15 +340,15 @@ def run_pipeline(
         # Regex chromosome filtering
         chrom_regex = p_filters.get("chromosome_regex")
         if chrom_regex and str(chrom_regex).strip():
-            print(f"Filtering chromosome names with regex pattern: '{chrom_regex}'\n")
+            logger.info(f"Filtering chromosome names with regex pattern: '{chrom_regex}'\n")
             protein_coding_transcripts = protein_coding_transcripts[
                 protein_coding_transcripts["chromosome_name"].str.contains(chrom_regex, regex=True)
             ]
     else:
-        print("No filtering rules provided. Retaining all retrieved transcripts.\n")
+        logger.info("No filtering rules provided. Retaining all retrieved transcripts.\n")
 
     # Load FASTA sequences
-    print("Loading FASTA sequences...")
+    logger.info("Loading FASTA sequence datasets (cDNA, CDS, Peptide)...")
 
     cdna_seqs = load_fasta_dict(input_cdna, r"^(ENST\d+)")
     cds_seqs = load_fasta_dict(input_cds, r"^(ENST\d+)")
@@ -330,8 +360,25 @@ def run_pipeline(
     valid_tx = filtered_tx_ids.intersection(cdna_seqs.keys(), cds_seqs.keys(), pep_seqs.keys())
     valid_tx = sorted(list(valid_tx))
 
+    missing_fasta_txs = filtered_tx_ids - set(valid_tx)
+    if missing_fasta_txs:
+        sample_missing = sorted(missing_fasta_txs)
+        sample_str = ", ".join(sample_missing[:5]) + (
+            f" and {len(sample_missing) - 5} more" if len(sample_missing) > 5 else ""
+        )
+        warnings.warn(
+            f"Detected {len(missing_fasta_txs)} transcript(s) in GTF annotation dataset lacking complete "
+            f"sequence representation across cDNA, CDS, or peptide FASTA files (e.g., {sample_str}). "
+            f"These will be omitted from downstream datasets.",
+            UserWarning,
+        )
+
+    logger.info(
+        f"Identified {len(valid_tx)} valid protein-coding transcripts with complete FASTA sequence concordance."
+    )
+
     # Calculate UTRs and format sequences
-    print("Extracting 5'UTR and 3'UTR regions...")
+    logger.info("Extracting 5' UTR and 3' UTR boundaries and formatting wild-type amino acid sequences...")
     seq_records = []
     aa_records = []
 
@@ -350,10 +397,12 @@ def run_pipeline(
                 seq_records.append({"ensembl_transcript_id": tx, "5utr": utr5, "coding": cds, "3utr": utr3})
 
                 # Handle partial amino acids and Stop Codons for peptides
-                partial_aa = TWO_BASE_MAP.get(cds[-2:], "") if len(cds) % 3 == 2 else ""
+                partial_aa = get_two_base_map(p_ncbi_genetic_code).get(cds[-2:], "") if len(cds) % 3 == 2 else ""
                 stop_symbol = "*" if len(cds) >= 3 and len(cds) % 3 == 0 and cds[-3:] in stop_codons_set else ""
                 final_pep = pep + partial_aa + stop_symbol
                 aa_records.append({"sequence": final_pep, "ensembl_transcript_id": tx})
+        else:
+            logger.debug(f"Transcript '{tx}' CDS sequence could not be aligned within its cDNA sequence. Skipping.")
 
     sequences = pd.DataFrame(seq_records)
     sequences_aa = pd.DataFrame(aa_records)
@@ -361,7 +410,7 @@ def run_pipeline(
     final_tx_ids = set(sequences["ensembl_transcript_id"])
 
     # Extraction of Structural Coordinates
-    print("Expanding output to exon-level (BioMart format)...")
+    logger.info("Expanding structural coordinates to exon-level boundaries (BioMart format)...")
 
     # Genes
     genes_gtf = gtf_data[gtf_data["feature"] == "gene"].copy()
@@ -418,7 +467,7 @@ def run_pipeline(
     ).drop_duplicates()
 
     # Load UniProt mappings
-    print("Loading UniProt mappings...")
+    logger.info(f"Loading UniProt isoform mappings from '{input_uniprot}'...")
     uniprot_cols = [
         "gene_stable_id",
         "transcript_stable_id",
@@ -446,9 +495,10 @@ def run_pipeline(
         .apply(lambda x: ";".join(x.unique()))
         .reset_index()
     )
+    logger.debug(f"Cross-referenced {len(uniprot_df)} target transcript IDs with valid UniProt isoform mappings.")
 
     # Generate Final Annotations
-    print("Generating Final Annotations...")
+    logger.info("Generating consolidated transcript annotations DataFrame...")
     # Filter to final transcripts
     pct = protein_coding_transcripts[protein_coding_transcripts["ensembl_transcript_id"].isin(final_tx_ids)].copy()
 
@@ -496,12 +546,16 @@ def run_pipeline(
     protein_coding_transcripts = pct[final_cols]
 
     # Save Results
-    print("Saving results to CSV...")
+    logger.info("Saving results to CSV...")
     sequences.to_csv(output_sequences, index=False)
     sequences_aa.to_csv(output_sequences_aa, index=False)
     protein_coding_transcripts.to_csv(output_annotations, index=False, na_rep="NA")
-
-    print("Done.\n")
+    logger.info(
+        f"Successfully exported extracted sequences ({len(sequences)} records) to '{output_sequences}', "
+        f"wild-type amino acid sequences ({len(sequences_aa)} records) to '{output_sequences_aa}', "
+        f"and exon-level annotations ({len(protein_coding_transcripts)} records) to '{output_annotations}'."
+    )
+    logger.info("Ensembl bulk reference data parsing pipeline completed successfully.")
 
 
 if __name__ == "__main__":
@@ -509,10 +563,7 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         is_snakemake = True
-        if hasattr(snakemake, "log") and snakemake.log:
-            log_f = open(snakemake.log[0], "w", buffering=1)
-            sys.stdout = log_f
-            sys.stderr = log_f
+        init_snakemake_log(snakemake, base_dir=Path.cwd())
     else:
         args = parse_args()
 
@@ -538,6 +589,9 @@ if __name__ == "__main__":
     )
     p_ncbi_genetic_code = snakemake.params.get("ncbi_genetic_code", 1) if is_snakemake else args.ncbi_genetic_code
 
+    if not is_snakemake and args.verbose:
+        logger.setLevel(logging.DEBUG)
+
     run_pipeline(
         input_gtf=input_gtf,
         input_cdna=input_cdna,
@@ -551,6 +605,3 @@ if __name__ == "__main__":
         p_filters=p_filters,
         p_ncbi_genetic_code=p_ncbi_genetic_code,
     )
-
-    if is_snakemake:
-        log_f.close()

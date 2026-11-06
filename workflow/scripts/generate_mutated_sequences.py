@@ -24,20 +24,26 @@ Optional Parameters:
 """
 
 import argparse
+import logging
 import multiprocessing as mp
 import re
 import sys
+import warnings
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 from Bio.Seq import translate
+from utils import init_snakemake_log, setup_logger, setup_warnings
 
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
 
     snakemake: Snakemake = Snakemake()
+
+logger = setup_logger(__name__)
+setup_warnings()
 
 # =============================================================================
 # HELPER FUNCTIONS & VARIANT PARSING
@@ -57,10 +63,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--annotations", required=True, help="Path to transcript annotations CSV.")
     parser.add_argument("--out-mutated", required=True, help="Output path for mutated sequences CSV.")
     parser.add_argument("--threads", type=int, default=1, help="Number of CPU threads to utilize.")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
 
 
-def parse_variant(variant_type: str, nuc_change: str) -> Optional[Dict[str, Any]]:
+def parse_variant(
+    variant_type: str, nuc_change: str, haplotype_transcript_id: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
     """
     Parses an HGVS-like nucleotide change string into a structured dictionary.
 
@@ -71,6 +80,7 @@ def parse_variant(variant_type: str, nuc_change: str) -> Optional[Dict[str, Any]
     Args:
         variant_type (:obj:`str`): The variant consequence type (e.g., 'missense_variant').
         nuc_change (:obj:`str`): HGVS nucleotide change string (e.g., 'c.123A>G', 'c.-15G>A', 'c.*10del').
+        haplotype_transcript_id (:obj:`str`, optional): Identifier of the target haplotype record for logging context.
 
     Returns:
         variant_attr (:obj:`dict` or :obj:`None`): A dictionary detailing parsed variant attributes, or `None` if the variant is intronic or unparseable:
@@ -81,77 +91,93 @@ def parse_variant(variant_type: str, nuc_change: str) -> Optional[Dict[str, Any]
             - **alt** (:obj:`str`): Alternative nucleotide allele.
             - **desc** (:obj:`str`): Variant class ('snp', 'del', or 'ins').
     """
-    if not nuc_change or "+" in nuc_change:
+    if not nuc_change:
+        return None
+
+    if "+" in nuc_change:
+        logger.debug(f"Skipping intronic variant consequence: '{nuc_change}'")
         return None  # Exclude intronic variants
 
     is_5utr = "-" in nuc_change
     is_3utr = "*" in nuc_change
+    context_prefix = f"Haplotype '{haplotype_transcript_id}': " if haplotype_transcript_id else ""
 
-    if "del" in nuc_change:
-        desc = "del"
-        ref = nuc_change.split("del")[-1]
-        alt = ""
-        sep = "_-" if is_5utr else ("_*" if is_3utr else "_")
-        parts = nuc_change.split("del")[0].split(sep)
-        pos_str = (
-            parts[-1]
-            if len(parts) > 1
-            else nuc_change.split("del")[0].replace("-", "").replace("*", "").replace("c.", "")
+    try:
+        if "del" in nuc_change:
+            desc = "del"
+            ref = nuc_change.split("del")[-1]
+            alt = ""
+            sep = "_-" if is_5utr else ("_*" if is_3utr else "_")
+            parts = nuc_change.split("del")[0].split(sep)
+            pos_str = (
+                parts[-1]
+                if len(parts) > 1
+                else nuc_change.split("del")[0].replace("-", "").replace("*", "").replace("c.", "")
+            )
+
+            try:
+                raw_pos = int(re.sub(r"[^\d]", "", pos_str))
+                pos = (raw_pos + len(ref) - 1) if is_5utr else (raw_pos - len(ref) + 1)
+            except ValueError:
+                return None
+
+        elif "ins" in nuc_change:
+            desc = "ins"
+            ref = ""
+            alt = nuc_change.split("ins")[-1]
+            sep = "_-" if is_5utr else ("_*" if is_3utr else "_")
+            parts = nuc_change.split("ins")[0].split(sep)
+            pos_str = (
+                parts[-1]
+                if len(parts) > 1
+                else nuc_change.split("ins")[0].replace("-", "").replace("*", "").replace("c.", "")
+            )
+
+            try:
+                raw_pos = int(re.sub(r"[^\d]", "", pos_str))
+                pos = (raw_pos + 1) if is_5utr else raw_pos
+            except ValueError:
+                return None
+
+        elif "dup" in nuc_change:
+            desc = "ins"
+            ref = ""
+            alt = nuc_change.split("dup")[-1]
+            sep = "_-" if is_5utr else ("_*" if is_3utr else "_")
+            parts = nuc_change.split("dup")[0].split(sep)
+            pos_str = (
+                parts[-1]
+                if len(parts) > 1
+                else nuc_change.split("dup")[0].replace("-", "").replace("*", "").replace("c.", "")
+            )
+
+            try:
+                raw_pos = int(re.sub(r"[^\d]", "", pos_str))
+                pos = (raw_pos + len(alt) - 1) if is_5utr else (raw_pos - len(alt) + 1)
+            except ValueError:
+                return None
+
+        elif ">" in nuc_change:
+            desc = "snp"
+            parts = nuc_change.split(">")
+            alt = parts[1]
+            ref = parts[0][-1]
+            pos_str = parts[0][:-1]
+            try:
+                pos = int(re.sub(r"[^\d]", "", pos_str))
+            except ValueError:
+                return None
+        else:
+            warnings.warn(
+                f"{context_prefix}Unrecognized HGVS nucleotide change syntax: '{nuc_change}' (type: '{variant_type}'). Skipping.",
+                UserWarning,
+            )
+            return None
+    except (ValueError, IndexError):
+        warnings.warn(
+            f"{context_prefix}Failed to parse coordinate position for variant '{nuc_change}' (type: '{variant_type}'). Skipping.",
+            UserWarning,
         )
-
-        try:
-            raw_pos = int(re.sub(r"[^\d]", "", pos_str))
-            pos = (raw_pos + len(ref) - 1) if is_5utr else (raw_pos - len(ref) + 1)
-        except ValueError:
-            return None
-
-    elif "ins" in nuc_change:
-        desc = "ins"
-        ref = ""
-        alt = nuc_change.split("ins")[-1]
-        sep = "_-" if is_5utr else ("_*" if is_3utr else "_")
-        parts = nuc_change.split("ins")[0].split(sep)
-        pos_str = (
-            parts[-1]
-            if len(parts) > 1
-            else nuc_change.split("ins")[0].replace("-", "").replace("*", "").replace("c.", "")
-        )
-
-        try:
-            raw_pos = int(re.sub(r"[^\d]", "", pos_str))
-            pos = (raw_pos + 1) if is_5utr else raw_pos
-        except ValueError:
-            return None
-
-    elif "dup" in nuc_change:
-        desc = "ins"
-        ref = ""
-        alt = nuc_change.split("dup")[-1]
-        sep = "_-" if is_5utr else ("_*" if is_3utr else "_")
-        parts = nuc_change.split("dup")[0].split(sep)
-        pos_str = (
-            parts[-1]
-            if len(parts) > 1
-            else nuc_change.split("dup")[0].replace("-", "").replace("*", "").replace("c.", "")
-        )
-
-        try:
-            raw_pos = int(re.sub(r"[^\d]", "", pos_str))
-            pos = (raw_pos + len(alt) - 1) if is_5utr else (raw_pos - len(alt) + 1)
-        except ValueError:
-            return None
-
-    elif ">" in nuc_change:
-        desc = "snp"
-        parts = nuc_change.split(">")
-        alt = parts[1]
-        ref = parts[0][-1]
-        pos_str = parts[0][:-1]
-        try:
-            pos = int(re.sub(r"[^\d]", "", pos_str))
-        except ValueError:
-            return None
-    else:
         return None
 
     return {
@@ -278,7 +304,12 @@ def compute_shift(shift: List[int], inss: List[Dict[str, Any]], dels: List[Dict[
 # =============================================================================
 
 
-def build_mutated_sequence(wt_sequence: Dict[str, str], variant_types_str: str, nuc_change_str: str) -> Dict[str, Any]:
+def build_mutated_sequence(
+    wt_sequence: Dict[str, str],
+    variant_types_str: str,
+    nuc_change_str: str,
+    haplotype_transcript_id: Optional[str] = None,
+) -> Dict[str, Any]:
     """
     Constructs the full mutated nucleotide sequence for a specific haplotype signature.
 
@@ -293,6 +324,7 @@ def build_mutated_sequence(wt_sequence: Dict[str, str], variant_types_str: str, 
             '5utr', 'coding', and '3utr'.
         variant_types_str (:obj:`str`): Comma-separated string of variant consequence types.
         nuc_change_str (:obj:`str`): Comma-separated string of HGVS nucleotide changes.
+        haplotype_transcript_id (:obj:`str`, optional): Identifier of the target haplotype record for logging context.
 
     Returns:
         mutated_data (:obj:`dict`): A dictionary containing mutated sequence evaluation metrics:
@@ -306,7 +338,7 @@ def build_mutated_sequence(wt_sequence: Dict[str, str], variant_types_str: str, 
 
     parsed_variants = []
     for vt, nc in zip(v_types, n_changes):
-        v_info = parse_variant(vt, nc)
+        v_info = parse_variant(vt, nc, haplotype_transcript_id=haplotype_transcript_id)
         if v_info:
             parsed_variants.append(v_info)
 
@@ -448,6 +480,7 @@ def process_row(row: Tuple[Any, pd.Series], sequences_dict: Dict[str, Dict[str, 
             wt_sequence=wt_seq,
             variant_types_str=data.get("variant_types", ""),
             nuc_change_str=data.get("nucleotide_change", ""),
+            haplotype_transcript_id=hap_id,
         )
         res = {"haplotype_transcript_id": hap_id, **res_mut}
 
@@ -490,11 +523,41 @@ def run_pipeline(
     df_wt = df_wt[df_wt["ensembl_transcript_id"].isin(anno_txs)]
     sequences_dict = df_wt.set_index("ensembl_transcript_id")[["coding", "5utr", "3utr"]].to_dict("index")
 
-    pool = mp.Pool(threads)
+    # Verification of reference sequence availability
+    missing_txs = set(df_haplo["ensembl_transcript_id"]) - set(sequences_dict.keys())
+    if missing_txs:
+        missing_list = sorted(missing_txs)
+        total_missing = len(missing_list)
+
+        # Detailed breakdown available only in DEBUG mode to prevent log pollution
+        logger.debug(
+            f"Complete list of {total_missing} transcript(s) lacking reference sequences: {', '.join(missing_list)}"
+        )
+
+        # Dynamic warning formatting based on element threshold
+        if total_missing <= 10:
+            tx_fmt = ", ".join(missing_list)
+        else:
+            tx_fmt = f"{', '.join(missing_list[:5])}, and {total_missing - 5} more"
+
+        warnings.warn(
+            f"Found {total_missing} transcript(s) in haplotype registry without matching reference sequences "
+            f"in '{wt_cds_path}' ({tx_fmt}). Mutation generation for these entries will fall back to empty sequences.",
+            UserWarning,
+        )
+
+    logger.info(
+        f"Initiating mutated nucleotide sequence generation for chromosome '{chrom_from_file}' "
+        f"across {len(df_haplo)} haplotype records using {threads} worker thread(s)..."
+    )
+
+    pool = mp.Pool(threads, initializer=setup_warnings)
     worker_func = partial(process_row, sequences_dict=sequences_dict)
     results = pool.map(worker_func, df_haplo.iterrows())
     pool.close()
     pool.join()
+
+    logger.info("Completed parallel sequence reconstruction. Merging mutated sequences into haplotype metadata...")
 
     df_res = pd.DataFrame(results)
     df_out = pd.merge(df_haplo, df_res, on="haplotype_transcript_id", how="left")
@@ -525,6 +588,9 @@ def run_pipeline(
     out_mutated_path.parent.mkdir(parents=True, exist_ok=True)
     df_out.to_csv(out_mutated_path, index=False, na_rep="NA")
 
+    logger.info(f"Successfully exported {len(df_out)} mutated sequence records to '{out_mutated_path}'.")
+    logger.info(f"Mutated sequence generation workflow completed successfully for chromosome '{chrom_from_file}'.")
+
 
 # =============================================================================
 # MAIN LOGIC
@@ -535,10 +601,7 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         is_snakemake = True
-        if hasattr(snakemake, "log") and snakemake.log:
-            log_f = open(snakemake.log[0], "w", buffering=1)
-            sys.stdout = log_f
-            sys.stderr = log_f
+        init_snakemake_log(snakemake, base_dir=Path.cwd())
     else:
         args = parse_args()
 
@@ -548,6 +611,9 @@ if __name__ == "__main__":
     out_mutated_path = snakemake.output["mutated_cds_csv"] if is_snakemake else args.out_mutated
     threads = snakemake.threads if is_snakemake else args.threads
 
+    if not is_snakemake and args.verbose:
+        logger.setLevel(logging.DEBUG)
+
     run_pipeline(
         haplotypes_path=haplotypes_path,
         wt_cds_path=wt_cds_path,
@@ -555,6 +621,3 @@ if __name__ == "__main__":
         out_mutated_path=out_mutated_path,
         threads=threads,
     )
-
-    if is_snakemake:
-        log_f.close()

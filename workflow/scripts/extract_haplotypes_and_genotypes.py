@@ -25,19 +25,25 @@ Optional Parameters:
 """
 
 import argparse
+import logging
 import multiprocessing as mp
 import sys
+import warnings
 from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import pandas as pd
 import pysam
+from utils import init_snakemake_log, setup_logger, setup_warnings
 
 if TYPE_CHECKING:
     from snakemake.script import Snakemake
 
     snakemake: Snakemake = Snakemake()
+
+logger = setup_logger(__name__)
+setup_warnings()
 
 # =============================================================================
 # HELPER FUNCTIONS
@@ -57,6 +63,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out-haplotypes", required=True, help="Output path for the haplotypes CSV.")
     parser.add_argument("--out-genotypes", required=True, help="Output path for the genotypes CSV.")
     parser.add_argument("--threads", type=int, default=1, help="Number of CPU cores to utilize.")
+    parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
 
 
@@ -129,6 +136,9 @@ def process_transcript(
                             {"var_str": variant_string, "rsid": rsid, "vtype": variant_type, "nchange": nuc_change}
                         )
         except ValueError:
+            logger.debug(
+                f"Exonic region {chrom}:{start}-{end} for transcript '{transcript_id}' could not be fetched from VCF index."
+            )
             continue
 
     vcf.close()
@@ -231,11 +241,26 @@ def run_pipeline(
     anno_df = anno_df[anno_df["chromosome_name"].astype(str) == chrom_from_vcf]
     transcripts = anno_df["ensembl_transcript_id"].unique()
 
-    pool = mp.Pool(threads)
+    if len(transcripts) == 0:
+        warnings.warn(
+            f"No target protein-coding transcripts found for chromosome '{chrom_from_vcf}' in annotations file '{annotations_path}'.",
+            UserWarning,
+        )
+
+    logger.info(
+        f"Initiating haplotype and genotype extraction for chromosome '{chrom_from_vcf}' "
+        f"across {len(samples)} samples and {len(transcripts)} target transcripts using {threads} worker thread(s)..."
+    )
+
+    pool = mp.Pool(threads, initializer=setup_warnings)
     worker_func = partial(process_transcript, annotations_df=anno_df, vcf_path=vcf_path, samples=samples)
     results = pool.map(worker_func, transcripts)
     pool.close()
     pool.join()
+
+    logger.info(
+        "Completed parallel transcript processing. Aggregating unique haplotypes and constructing sample genotype matrices..."
+    )
 
     all_haplotypes = []
     all_genotypes = []
@@ -269,6 +294,12 @@ def run_pipeline(
     df_haplotypes.to_csv(out_haplotypes, index=False, na_rep="NA")
     pd.DataFrame(all_genotypes).to_csv(out_genotypes, index=False, na_rep="NA")
 
+    logger.info(
+        f"Successfully exported {len(df_haplotypes)} haplotype records to '{out_haplotypes}' "
+        f"and sample genotype matrix across {len(all_genotypes)} transcripts to '{out_genotypes}'."
+    )
+    logger.info(f"Haplotype and genotype extraction workflow completed successfully for chromosome '{chrom_from_vcf}'.")
+
 
 # =============================================================================
 # MAIN LOGIC
@@ -279,10 +310,7 @@ if __name__ == "__main__":
 
     if "snakemake" in globals():
         is_snakemake = True
-        if hasattr(snakemake, "log") and snakemake.log:
-            log_f = open(snakemake.log[0], "w", buffering=1)
-            sys.stdout = log_f
-            sys.stderr = log_f
+        init_snakemake_log(snakemake, base_dir=Path.cwd())
     else:
         args = parse_args()
 
@@ -292,6 +320,9 @@ if __name__ == "__main__":
     out_genotypes = snakemake.output["genotypes_csv"] if is_snakemake else args.out_genotypes
     threads = snakemake.threads if is_snakemake else args.threads
 
+    if not is_snakemake and args.verbose:
+        logger.setLevel(logging.DEBUG)
+
     run_pipeline(
         vcf_path=vcf_path,
         annotations_path=annotations_path,
@@ -299,6 +330,3 @@ if __name__ == "__main__":
         out_genotypes=out_genotypes,
         threads=threads,
     )
-
-    if is_snakemake:
-        log_f.close()
