@@ -56,6 +56,20 @@ properties:
       release:
         type: string
         description: "Ensembl release version."
+      download_ensembl_dataset:
+        type: object
+        description: "Parameters specific to the download_ensembl_dataset rule."
+        properties:
+          max_retries:
+            type: integer
+            minimum: 1
+            default: 3
+            description: "Maximum download retry attempts for transient network failures."
+          backoff_factor:
+            type: number
+            minimum: 0.0
+            default: 5.0
+            description: "Exponential backoff factor in seconds applied between download retries."
       parse_ensembl_bulk_sequences:
         type: object
         description: "Parameters specific to the parse_ensembl_bulk_sequences rule."

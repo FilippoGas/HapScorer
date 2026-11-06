@@ -23,6 +23,10 @@ phasing:
 reference_data:
   release: "113"
 
+  download_ensembl_dataset:
+    max_retries: 3
+    backoff_factor: 5.0
+
   parse_ensembl_bulk_sequences:
     transcript_biotype: "protein_coding"
     filters:

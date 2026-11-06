@@ -26,7 +26,7 @@ set-threads:
   phase_common_variants: 3
 
   # workflow/rules/reference_data.smk
-  download_ensembl_bulk_data: 1
+  download_ensembl_dataset: 1
   parse_ensembl_bulk_sequences: 1
 
   # workflow/rules/haplotype_sequences.smk
@@ -57,9 +57,9 @@ set-resources:
     runtime: 60
 
   # workflow/rules/reference_data.smk
-  download_ensembl_bulk_data:
+  download_ensembl_dataset:
     mem_mb: 2000
-    runtime: 60
+    runtime: 30
   parse_ensembl_bulk_sequences:
     mem_mb: 7500
     runtime: 60

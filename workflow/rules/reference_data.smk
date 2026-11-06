@@ -8,6 +8,20 @@ REF_DIR = Path(res_cfg.setdefault("ref_data_dir", "resources/reference_data"))
 ref_cfg = config.setdefault("reference_data", {})
 ENSEMBL_RELEASE = ref_cfg.setdefault("release", "113")
 
+# --- Map dataset filenames to their canonical upstream Ensembl URLs ---
+DATASET_URLS = {
+    f"Homo_sapiens.GRCh38.{ENSEMBL_RELEASE}.gtf.gz": f"https://ftp.ensembl.org/pub/release-{ENSEMBL_RELEASE}/gtf/homo_sapiens/Homo_sapiens.GRCh38.{ENSEMBL_RELEASE}.gtf.gz",
+    "Homo_sapiens.GRCh38.cds.all.fa.gz": f"https://ftp.ensembl.org/pub/release-{ENSEMBL_RELEASE}/fasta/homo_sapiens/cds/Homo_sapiens.GRCh38.cds.all.fa.gz",
+    "Homo_sapiens.GRCh38.pep.all.fa.gz": f"https://ftp.ensembl.org/pub/release-{ENSEMBL_RELEASE}/fasta/homo_sapiens/pep/Homo_sapiens.GRCh38.pep.all.fa.gz",
+    "Homo_sapiens.GRCh38.cdna.all.fa.gz": f"https://ftp.ensembl.org/pub/release-{ENSEMBL_RELEASE}/fasta/homo_sapiens/cdna/Homo_sapiens.GRCh38.cdna.all.fa.gz",
+    f"Homo_sapiens.GRCh38.{ENSEMBL_RELEASE}.uniprot.tsv.gz": f"https://ftp.ensembl.org/pub/release-{ENSEMBL_RELEASE}/tsv/homo_sapiens/Homo_sapiens.GRCh38.{ENSEMBL_RELEASE}.uniprot.tsv.gz",
+}
+
+# --- Rule-specific settings for download_ensembl_dataset ---
+dl_ds_cfg = ref_cfg.setdefault("download_ensembl_dataset", {})
+MAX_RETRIES = dl_ds_cfg.setdefault("max_retries", 3)
+BACKOFF_FACTOR = dl_ds_cfg.setdefault("backoff_factor", 5.0)
+
 # --- Rule-specific settings for parse_ensembl_bulk_sequences ---
 dl_seq_cfg = ref_cfg.setdefault("parse_ensembl_bulk_sequences", {})
 TRANSCRIPT_BIOTYPE = dl_seq_cfg.setdefault("transcript_biotype", "protein_coding")
@@ -21,44 +35,37 @@ FILTERS = dl_seq_cfg.setdefault(
 )
 
 
-rule download_ensembl_bulk_data:
+rule download_ensembl_dataset:
     """
-    Download genomic feature annotations (GTF) and sequence datasets (FASTA)
-    from Ensembl FTP servers.
+    Download a single genomic reference dataset file from Ensembl FTP servers.
 
-    Executes a Python script to reliably download the data, verify network
-    transfer integrity using Ensembl's legacy UNIX `sum` checksums, and
-    subsequently generate cryptographic SHA-256 hashes for long-term
-    data provenance and storage integrity.
+    Executes a Python script to retrieve the specified dataset file, applying network
+    retry mechanisms with exponential backoff. Validates network transfer integrity
+    using Ensembl's legacy UNIX `sum` checksums and generates cryptographic SHA-256
+    digests for storage provenance.
 
-    :output gtf: Compressed GTF file containing genomic feature annotations.
-    :output cds: Compressed FASTA file containing coding sequences.
-    :output pep: Compressed FASTA file containing amino acid (peptide) sequences.
-    :output cdna: Compressed FASTA file containing complementary DNA (transcript) sequences.
-    :output uniprot: Compressed TSV file containing UniProt cross-reference mappings.
+    :output dataset: Individual target reference file within the reference data directory.
 
     """
     output:
-        gtf=REF_DIR / f"Homo_sapiens.GRCh38.{ENSEMBL_RELEASE}.gtf.gz",
-        cds=REF_DIR / "Homo_sapiens.GRCh38.cds.all.fa.gz",
-        pep=REF_DIR / "Homo_sapiens.GRCh38.pep.all.fa.gz",
-        cdna=REF_DIR / "Homo_sapiens.GRCh38.cdna.all.fa.gz",
-        uniprot=REF_DIR / f"Homo_sapiens.GRCh38.{ENSEMBL_RELEASE}.uniprot.tsv.gz",
+        dataset=REF_DIR / "{dataset}",
     log:
-        "logs/reference_data/download_ensembl_bulk_data.log",
+        "logs/reference_data/download_ensembl_dataset/{dataset}.log",
     benchmark:
-        "benchmarks/reference_data/download_ensembl_bulk_data.tsv"
+        "benchmarks/reference_data/download_ensembl_dataset/{dataset}.tsv"
     retries: 3
     conda:
         "../envs/reference_data.yaml"
     threads: 1
     resources:
-        mem_mb=4000,
-        runtime=60,
+        mem_mb=1000,
+        runtime=30,
     params:
-        release=ENSEMBL_RELEASE,
+        url=lambda wildcards: DATASET_URLS[wildcards.dataset],
+        max_retries=MAX_RETRIES,
+        backoff_factor=BACKOFF_FACTOR,
     message:
-        "Downloading and verifying Ensembl bulk reference files (Release {params.release})"
+        "Downloading and verifying Ensembl reference dataset: {wildcards.dataset}"
     script:
         "../scripts/download_ensembl_bulk.py"
 
