@@ -115,23 +115,28 @@ rule translate_sequences:
 
 rule compute_frequencies:
     """
-    Computes the populational frequency of each transcript haplotype.
+    Computes populational haplotype frequencies and separates output deliverables.
 
-    Integrates the translated haplotype sequences with the sample genotype matrix
-    to calculate the relative frequency percentage of each unique haplotype
-    across the entire analyzed cohort.
+    Integrates translated haplotype sequences with the sample genotype matrix
+    to calculate the relative frequency percentage ('freq_perc') of each unique
+    haplotype across the cohort. Exports a lightweight annotated metadata CSV
+    and a dedicated sequence mapping CSV for memory efficiency.
 
     :input haplotypes: The translated haplotype sequences dataset.
     :input genotypes: Matrix mapping sample genotypes to haplotype identifiers.
-    :output haplotypes_annotated: Finalized haplotype dataset including the 'freq_perc' metric.
+    :output haplotypes_annotations: Lightweight haplotype metadata dataset including 'freq_perc'.
+    :output haplotypes_sequences: Dedicated CSV file mapping haplotypes to nucleotide and amino acid sequences.
 
     """
     input:
         haplotypes="results/haplotype_sequences/haplotypes/{chr}_haplotypes_aa.csv",
         genotypes="results/haplotype_sequences/genotypes/{chr}_genotypes.csv",
     output:
-        haplotypes_annotated=protected(
-            "results/haplotype_sequences/haplotypes/{chr}_haplotypes_annotated.csv"
+        haplotypes_annotations=protected(
+            "results/haplotype_sequences/haplotypes/{chr}_haplotypes_annotations.csv"
+        ),
+        haplotypes_sequences=protected(
+            "results/haplotype_sequences/haplotypes/{chr}_haplotypes_sequences.csv"
         ),
     log:
         "logs/haplotype_sequences/compute_frequencies/{chr}.log",

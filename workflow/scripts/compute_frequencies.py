@@ -6,7 +6,8 @@ Computes the populational frequency of each haplotype.
 This script processes the genotype matrix and the translated haplotype metadata.
 It unpivots the genotype matrix, extracts individual alleles, and aggregates
 their occurrences to compute the absolute and relative percentage frequency
-of each unique transcript haplotype within the cohort.
+of each unique transcript haplotype within the cohort. It splits the results
+into lightweight annotated metadata and dedicated heavy sequence mapping files.
 
 Supports dual execution modes:
 1. Native Snakemake workflow integration via the `script:` directive.
@@ -17,7 +18,8 @@ Expected Snakemake Inputs (or CLI Arguments):
     - **haplotypes_aa** (`--haplotypes-aa`): CSV file containing the translated haplotypes metadata.
 
 Expected Snakemake Outputs (or CLI Arguments):
-    - **haplotypes_annotated** (`--out-haplotypes`): Annotated CSV file updated with the `freq_perc` metric.
+    - **haplotypes_annotations** (`--out-annotations`): Lightweight CSV file updated with the `freq_perc` metric.
+    - **haplotypes_sequences** (`--out-sequences`): Dedicated CSV file mapping haplotypes to nucleotide and amino acid sequences.
 """
 
 import argparse
@@ -49,7 +51,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Computes haplotype frequencies using Polars.")
     parser.add_argument("--genotypes", required=True, help="Path to input genotypes CSV.")
     parser.add_argument("--haplotypes-aa", required=True, help="Path to input haplotypes AA CSV.")
-    parser.add_argument("--out-haplotypes", required=True, help="Path to output finalized annotated haplotypes CSV.")
+    parser.add_argument("--out-annotations", required=True, help="Path to output lightweight annotated haplotypes CSV.")
+    parser.add_argument("--out-sequences", required=True, help="Path to output dedicated haplotype sequences CSV.")
     parser.add_argument("--threads", type=int, default=1, help="Maximum number of threads for Polars.")
     parser.add_argument("--verbose", action="store_true", help="Enable detailed DEBUG logging output.")
     return parser.parse_args()
@@ -58,21 +61,27 @@ def parse_args() -> argparse.Namespace:
 def run_pipeline(
     genotypes_path: Union[str, Path],
     haplotypes_path: Union[str, Path],
-    out_path: Union[str, Path],
+    out_ann_path: Union[str, Path],
+    out_seq_path: Union[str, Path],
     threads: int,
 ) -> None:
     """
     Executes the frequency computation pipeline using Polars.
 
+    Splits the final deliverables into a lightweight frequency-annotated metadata CSV
+    and a dedicated heavy sequence mapping CSV for memory efficiency.
+
     Args:
         genotypes_path (:obj:`str` or :obj:`pathlib.Path`): Path to the genotype matrix CSV.
         haplotypes_path (:obj:`str` or :obj:`pathlib.Path`): Path to the translated haplotypes CSV.
-        out_path (:obj:`str` or :obj:`pathlib.Path`): Destination path for the annotated haplotypes CSV file.
-        threads (:obj:`int`): Number of CPU worker threads to spawn for multiprocessing execution of `polars` python module.
+        out_ann_path (:obj:`str` or :obj:`pathlib.Path`): Destination path for the lightweight annotated haplotypes CSV file.
+        out_seq_path (:obj:`str` or :obj:`pathlib.Path`): Destination path for the dedicated haplotype sequences CSV file.
+        threads (:obj:`int`): Number of CPU worker threads to spawn for multithreaded execution of `polars` python module.
     """
     genotypes_path = Path(genotypes_path)
     haplotypes_path = Path(haplotypes_path)
-    out_path = Path(out_path)
+    out_ann_path = Path(out_ann_path)
+    out_seq_path = Path(out_seq_path)
 
     # Set the thread limit at the operating system level
     os.environ["POLARS_MAX_THREADS"] = str(threads)
@@ -172,11 +181,30 @@ def run_pipeline(
     if valid_cols:
         df_final = df_final.with_columns([pl.col(c).cast(pl.String).str.to_uppercase() for c in valid_cols])
 
-    # Export
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    df_final.write_csv(out_path, null_value="NA")
+    # Separate lightweight metadata/statistics dataset from heavy sequence data
+    seq_cols = ["nn_sequence", "aa_sequence"]
+    meta_cols = [c for c in df_final.columns if c not in seq_cols]
 
-    logger.info(f"Successfully exported annotated haplotype dataset with frequency metrics to '{out_path}'.")
+    df_annotations = df_final.select(meta_cols)
+
+    # Extract dedicated sequence mapping table
+    seq_export_cols = [
+        c
+        for c in ["haplotype_transcript_id", "ensembl_transcript_id", "nn_sequence", "aa_sequence"]
+        if c in df_final.columns
+    ]
+    df_sequences = df_final.select(seq_export_cols)
+
+    # Export lightweight annotated metadata
+    out_ann_path.parent.mkdir(parents=True, exist_ok=True)
+    df_annotations.write_csv(out_ann_path, null_value="NA")
+    logger.info(f"Successfully exported lightweight annotated haplotype metadata to '{out_ann_path}'.")
+
+    # Export heavy sequence mapping dataset
+    out_seq_path.parent.mkdir(parents=True, exist_ok=True)
+    df_sequences.write_csv(out_seq_path, null_value="NA")
+    logger.info(f"Successfully exported dedicated haplotype sequences to '{out_seq_path}'.")
+
     logger.info("Populational haplotype frequency computation workflow completed successfully.")
 
 
@@ -191,7 +219,8 @@ if __name__ == "__main__":
 
     genotypes_path = snakemake.input["genotypes"] if is_snakemake else args.genotypes
     haplotypes_path = snakemake.input["haplotypes"] if is_snakemake else args.haplotypes_aa
-    out_path = snakemake.output["haplotypes_annotated"] if is_snakemake else args.out_haplotypes
+    out_ann_path = snakemake.output["haplotypes_annotations"] if is_snakemake else args.out_annotations
+    out_seq_path = snakemake.output["haplotypes_sequences"] if is_snakemake else args.out_sequences
     threads = snakemake.threads if is_snakemake else args.threads
 
     if not is_snakemake and args.verbose:
@@ -200,6 +229,7 @@ if __name__ == "__main__":
     run_pipeline(
         genotypes_path=genotypes_path,
         haplotypes_path=haplotypes_path,
-        out_path=out_path,
+        out_ann_path=out_ann_path,
+        out_seq_path=out_seq_path,
         threads=threads,
     )

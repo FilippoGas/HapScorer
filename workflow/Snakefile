@@ -72,7 +72,11 @@ rule all:
     default_target: True
     input:
         expand(
-            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_annotated.csv",
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_annotations.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_sequences.csv",
             i=[3, 6, 8, 21, 22],
         ),
 
@@ -104,6 +108,10 @@ rule all_test:
             i=[3, 6, 8, 21, 22],
         ),
         expand(
-            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_annotated.csv",
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_annotations.csv",
+            i=[3, 6, 8, 21, 22],
+        ),
+        expand(
+            "results/haplotype_sequences/haplotypes/chr{i}_haplotypes_sequences.csv",
             i=[3, 6, 8, 21, 22],
         ),
