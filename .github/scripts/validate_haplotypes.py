@@ -5,6 +5,7 @@ Validates the structural integrity, schema correctness, and biological sanity of
 generated haplotype and genotype datasets across evaluated chromosomes.
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -12,7 +13,16 @@ import pandas as pd
 
 # Parse command-line argument for base directory (default: current directory)
 base_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("")
-chromosomes = ["chr3", "chr6", "chr8", "chr21", "chr22"]
+
+# Dynamically discover generated chromosome output files
+haplo_dir = base_dir / "results/haplotype_sequences/haplotypes"
+haplo_files = sorted(
+    haplo_dir.glob("*_haplotypes_annotated.csv"),
+    key=lambda p: [int(text) if text.isdigit() else text for text in re.split(r"(\d+)", p.name)],
+)
+chromosomes = [f.name.replace("_haplotypes_annotated.csv", "") for f in haplo_files]
+
+assert len(chromosomes) > 0, f"No annotated haplotype files found in {haplo_dir}"
 
 print(f"=== INITIATING HAPLOTYPE & GENOTYPE BIOLOGICAL VALIDATION ON: {base_dir} ===")
 
