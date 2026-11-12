@@ -4,8 +4,9 @@
 # PIPELINE ANALYSIS CONFIGURATION
 # ==============================================================================
 
-# --- Input Files & Metadata ---
+# --- Input Files, Metadata & Global Options ---
 samples: "config/samples.tsv"
+ncbi_genetic_code: 1
 # resources:
 #   genetic_maps_tar: "resources/genetic_maps.b38.tar.gz"
 #   genetic_maps_dir: "resources/maps"
@@ -22,6 +23,10 @@ phasing:
 reference_data:
   release: "113"
 
+  download_ensembl_dataset:
+    max_retries: 3
+    backoff_factor: 5.0
+
   parse_ensembl_bulk_sequences:
     transcript_biotype: "protein_coding"
     filters:
@@ -32,7 +37,6 @@ reference_data:
       excluded_chromosomes:
         - "MT"
       chromosome_regex: "^\\d{1,2}$"
-    stop_codons:
-      - "TAA"
-      - "TAG"
-      - "TGA"
+
+# --- Haplotype Sequences Rules Configuration ---
+# haplotype_sequences:

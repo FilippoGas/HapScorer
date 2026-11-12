@@ -17,3 +17,5 @@ workflow/notebooks/.ipynb_checkpoints/**
 **/.Rproj.user/**
 **/.RData
 **/Rplots.pdf
+
+__pycache__

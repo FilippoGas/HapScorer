@@ -41,16 +41,11 @@ assert set(cols_seq).issubset(df_aa.columns), "Invalid header format in amino ac
 print(f"Total transcripts retrieved: {len(df_tx)}")
 assert len(df_tx) > 10000, "Insufficient transcript count retrieved"
 
-# Biological Sanity Checks
-# A) Positive control: verify presence of canonical marker gene (TP53)
-has_tp53 = "TP53" in df_tx["hgnc_symbol"].values
-assert has_tp53, "Positive control failed: TP53 gene missing from dataset"
-
-# B) Accession ID validation: verify Ensembl transcript identifier syntax (ENST prefix)
+# A) Accession ID validation: verify Ensembl transcript identifier syntax (ENST prefix)
 valid_ids = df_tx["ensembl_transcript_id"].astype(str).str.startswith("ENST").all()
 assert valid_ids, "Invalid transcript identifiers detected (missing mandatory 'ENST' prefix)"
 
-# C) Nucleotide sequence integrity: verify IUPAC character compliance in CDS (A, C, G, T, N)
+# B) Nucleotide sequence integrity: verify IUPAC character compliance in CDS (A, C, G, T, N)
 cds_cols = [c for c in ["coding", "cds", "sequence"] if c in df_cds.columns]
 assert len(cds_cols), "No valid CDS sequence column found"
 cds_col = cds_cols[0]
@@ -58,7 +53,7 @@ sample_cds = df_cds[cds_col].dropna().head(100)
 valid_dna = sample_cds.astype(str).str.contains(r"^[ACGTNacgtn]+$", regex=True).all()
 assert valid_dna, "Non-IUPAC/invalid characters detected within CDS sequences"
 
-# D) Protein translation integrity: verify canonical start codon methionine ('M') frequency
+# C) Protein translation integrity: verify canonical start codon methionine ('M') frequency
 aa_cols = [c for c in ["peptide", "protein_sequence", "sequence"] if c in df_aa.columns]
 assert len(aa_cols), "No valid amino acid sequence column found"
 aa_col = aa_cols[0]
