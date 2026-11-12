@@ -1,21 +1,45 @@
-results/**
-resources/**
-logs/**
-benchmarks/**
-data/**
-profiles/local-test/**
-.snakemake
-.snakemake/**
-.test/benchmarks/**
-.test/logs/**
+# .gitignore
+
+# ==============================================================================
+# Workflow Executions & Analysis Outputs (Snakemake)
+# ==============================================================================
+.snakemake/
+benchmarks/
+data/
+logs/
+profiles/local-test/
+results/
+resources/
+
+# ==============================================================================
+# Test Suite Executions & Test Data Exceptions
+# ==============================================================================
+.test/benchmarks/
+.test/logs/
 .test/resources/**
 !.test/resources/genetic_maps.b38.tar.gz
-.test/results/**
-workflow/notebooks/.ipynb_checkpoints/**
-**/.Rhistory
-**/*.Rproj
-**/.Rproj.user/**
-**/.RData
-**/Rplots.pdf
+.test/results/
 
-__pycache__
+# ==============================================================================
+# R Environment & Workspace Artifacts
+# ==============================================================================
+.Rproj.user/
+.RData
+.Rhistory
+*.Rproj
+Rplots.pdf
+
+# ==============================================================================
+# Python Runtime & Interactive Notebook Checkpoints
+# ==============================================================================
+__pycache__/
+.pytest_cache/
+workflow/notebooks/.ipynb_checkpoints/
+
+# ==============================================================================
+# Operating System & IDE System Files
+# ==============================================================================
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
